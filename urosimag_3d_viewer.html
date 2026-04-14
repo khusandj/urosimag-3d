@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UROSIMAG 3D Box — 2K</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080608;color:#f0e0b0;font-family:'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+#hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:linear-gradient(90deg,#12100a,#1c1500,#12100a);border-bottom:1px solid #4a3000;flex-shrink:0}
+#hdr h1{font-size:14px;color:#d4a030;letter-spacing:2px}
+#hdr p{font-size:10px;color:#806030}
+.hbtn{padding:5px 12px;border-radius:5px;border:1px solid #5a3800;background:rgba(200,150,20,.1);color:#b09040;font-size:11px;cursor:pointer;transition:.2s}
+.hbtn:hover,.hbtn.act{background:rgba(200,150,20,.3);color:#e8c050;border-color:#c8a040}
+#wrap{display:flex;flex:1;overflow:hidden}
+
+/* ── DIELINE PANEL ── */
+#dl-panel{width:390px;background:#0a0800;border-right:1px solid #2a1800;display:flex;flex-direction:column;flex-shrink:0}
+#dl-panel.hide{display:none}
+#dl-toolbar{display:flex;gap:5px;padding:7px;border-bottom:1px solid #2a1800;flex-shrink:0;flex-wrap:wrap;align-items:center}
+.tbtn{padding:5px 9px;border-radius:5px;border:1px solid #3a2200;background:rgba(200,150,20,.08);color:#a07030;font-size:11px;cursor:pointer;white-space:nowrap;transition:.15s}
+.tbtn:hover{background:rgba(200,150,20,.25);color:#e8c050}
+.tbtn.primary{background:linear-gradient(135deg,#a07010,#d8a030);color:#100800;font-weight:700;border-color:#c08020}
+.tbtn.primary:hover{filter:brightness(1.15)}
+#dl-canvas-wrap{flex:1;overflow:hidden;background:#060400;cursor:crosshair;position:relative}
+#dl-canvas{display:block}
+#face-legend{display:flex;gap:4px;padding:5px 7px;border-top:1px solid #2a1800;flex-shrink:0;flex-wrap:wrap}
+.fl-item{display:flex;align-items:center;gap:4px;padding:3px 7px;border-radius:4px;border:1px solid transparent;cursor:pointer;font-size:10px;transition:.15s}
+.fl-item.sel{border-color:#e8c050!important;background:rgba(255,220,80,.12)!important}
+.fl-item:hover{background:rgba(255,220,80,.08)}
+.fl-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* ── 3D PANEL ── */
+#v3d{flex:1;position:relative;background:#07050a}
+#v3d canvas{display:block}
+#over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,3,8,.93);z-index:10;flex-direction:column;gap:14px}
+#over.hide{display:none}
+.dropbox{border:2px dashed #9a7020;border-radius:14px;padding:28px 44px;text-align:center;background:rgba(20,14,0,.7);cursor:pointer;transition:.3s}
+.dropbox:hover,.dropbox.dov{border-color:#e8c050;background:rgba(50,34,0,.8)}
+.dropbox .ico{font-size:34px;margin-bottom:8px}
+.dropbox h2{font-size:16px;color:#d8b040;margin-bottom:5px}
+.dropbox p{color:#907030;font-size:12px;line-height:1.5}
+.upbtn{background:linear-gradient(135deg,#b07810,#e8b830);color:#100800;border:none;padding:10px 26px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer}
+#flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(220,170,30,.95);color:#0a0500;padding:12px 28px;border-radius:9px;font-size:14px;font-weight:700;display:none;z-index:30;pointer-events:none;text-align:center;min-width:200px}
+
+/* ── RIGHT PANEL ── */
+#rp{width:210px;background:#09070a;border-left:1px solid #2a1800;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.rps{padding:9px 10px;border-bottom:1px solid #221500}
+.rps h3{font-size:9px;color:#b09040;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px}
+.vg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:2px}
+.vb{padding:6px 3px;border:1px solid #3a2200;border-radius:4px;background:rgba(255,190,30,.06);color:#907030;font-size:10px;cursor:pointer;text-align:center;transition:.15s}
+.vb:hover{background:rgba(255,190,30,.2);color:#e8c050;border-color:#b08020}
+.rbtn{width:100%;padding:7px;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;margin-bottom:4px;transition:.15s}
+.rbtn:last-child{margin-bottom:0}
+.rbtn.gold{background:linear-gradient(135deg,#a07010,#d8a030);color:#0a0500}
+.rbtn.gold:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.rbtn.dk{background:rgba(255,190,30,.08);color:#b09040;border:1px solid #3a2200}
+.rbtn.dk:hover{background:rgba(255,190,30,.2)}
+.rbtn.tr{background:rgba(80,180,255,.08);color:#60b0e0;border:1px solid #203040}
+.rbtn.tr:hover{background:rgba(80,180,255,.2)}
+
+/* Dimension input rows */
+.dim-row{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.dim-row label{font-size:9px;color:#806030;width:18px;flex-shrink:0}
+.dim-row input[type=range]{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:#3a2200;outline:none}
+.dim-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#c8a040;cursor:pointer}
+.dim-row .num{width:40px;background:#1a1200;border:1px solid #3a2200;border-radius:4px;color:#e8c050;font-size:10px;padding:2px 4px;text-align:right;outline:none}
+.dim-row .num:focus{border-color:#c8a040}
+.dim-unit{font-size:9px;color:#605020;width:14px}
+
+/* Background selector */
+.bg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}
+.bg-swatch{width:100%;aspect-ratio:1;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:.15s;position:relative}
+.bg-swatch.sel{border-color:#e8c050!important}
+.bg-swatch:hover{transform:scale(1.08)}
+.color-pick-row{display:flex;align-items:center;gap:6px;margin-top:4px}
+.color-pick-row label{font-size:10px;color:#907030;flex:1}
+#bg-color-inp{width:32px;height:22px;border:1px solid #3a2200;border-radius:4px;cursor:pointer;background:none;padding:1px}
+
+/* Save quality selector */
+.q-row{display:flex;gap:4px;margin-bottom:6px}
+.q-btn{flex:1;padding:5px 2px;border-radius:4px;border:1px solid #3a2200;background:rgba(255,190,30,.05);color:#907030;font-size:10px;cursor:pointer;text-align:center;transition:.15s}
+.q-btn.sel,.q-btn:hover{background:rgba(255,190,30,.2);color:#e8c050;border-color:#b08020}
+
+/* Preset row */
+.preset-row{display:flex;gap:4px;flex-wrap:wrap}
+.preset-btn{padding:4px 7px;border-radius:4px;border:1px solid #3a2200;background:rgba(200,150,30,.06);color:#907030;font-size:9px;cursor:pointer;transition:.15s;white-space:nowrap}
+.preset-btn:hover{background:rgba(200,150,30,.2);color:#e8c050}
+
+.tr{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#907030;margin-bottom:5px}
+.tog{width:30px;height:15px;background:#3a2200;border-radius:7px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tog.on{background:#b08020}
+.tog::after{content:'';position:absolute;width:11px;height:11px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s}
+.tog.on::after{left:17px}
+.sr{margin-bottom:5px}
+.sr label{display:flex;justify-content:space-between;font-size:10px;color:#907030;margin-bottom:3px}
+.sr label span{color:#e8c050;font-weight:600}
+.sr input[type=range]{width:100%;-webkit-appearance:none;height:3px;border-radius:2px;background:#3a2200;outline:none}
+.sr input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#c8a040;cursor:pointer}
+
+#sbar{background:#060407;border-top:1px solid #221500;padding:4px 12px;font-size:10px;color:#504020;display:flex;justify-content:space-between;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <div><h1>UROSIMAG 3D BOX — 2K</h1><p>Dieline → 3D Karobka · 2K/4K Export</p></div>
+  <div style="display:flex;gap:6px">
+    <button class="hbtn act" id="hb-dl" onclick="setMode('dl')">Dieline Editor</button>
+    <button class="hbtn" id="hb-3d"  onclick="setMode('3d')">Faqat 3D</button>
+  </div>
+</div>
+
+<div id="wrap">
+  <!-- DIELINE EDITOR -->
+  <div id="dl-panel">
+    <div id="dl-toolbar">
+      <button class="tbtn primary" onclick="trigUpload()">📁 Yuklash</button>
+      <button class="tbtn" id="btn-auto" onclick="autoDetect()">🔍 Avtomatik</button>
+      <button class="tbtn primary" onclick="applyAll()" id="btn-apply">▶ 3D ga qo'llash</button>
+    </div>
+    <div id="dl-canvas-wrap"><canvas id="dl-canvas"></canvas></div>
+    <div id="face-legend"></div>
+  </div>
+
+  <!-- 3D VIEWER -->
+  <div id="v3d">
+    <div id="over">
+      <div class="dropbox" id="dropzone">
+        <div class="ico">📦</div>
+        <h2>Dieline / Shablon rasmini yuklang</h2>
+        <p>Karobkaning yoyilma shablonini<br>bu yerga tashlang yoki tanlang</p>
+      </div>
+      <button class="upbtn" onclick="trigUpload()">Rasm tanlash</button>
+      <p style="font-size:11px;color:#605020;margin-top:4px">Yoki <span style="color:#c8a040;cursor:pointer" onclick="runDemo()">Demo ko'rish</span></p>
+    </div>
+    <div id="flash"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rp">
+
+    <!-- Camera -->
+    <div class="rps">
+      <h3>Rakurslar</h3>
+      <div class="vg">
+        <div class="vb" onclick="sv('front')">Old</div>
+        <div class="vb" onclick="sv('back')">Orqa</div>
+        <div class="vb" onclick="sv('left')">Chap</div>
+        <div class="vb" onclick="sv('right')">O'ng</div>
+        <div class="vb" onclick="sv('top')">Yuqori</div>
+        <div class="vb" onclick="sv('iso')">Diagonal</div>
+      </div>
+    </div>
+
+    <!-- Dimensions -->
+    <div class="rps">
+      <h3>O'lchamlar (mm)</h3>
+      <div class="dim-row">
+        <label>Eni</label>
+        <input type="range" id="slw" min="50" max="400" step="1" value="180" oninput="syncDim('w',this.value)">
+        <input class="num" id="nw" type="number" min="50" max="400" value="180" oninput="syncDim('w',this.value)">
+        <span class="dim-unit">mm</span>
+      </div>
+      <div class="dim-row">
+        <label>Boy</label>
+        <input type="range" id="slh" min="30" max="250" step="1" value="100" oninput="syncDim('h',this.value)">
+        <input class="num" id="nh" type="number" min="30" max="250" value="100" oninput="syncDim('h',this.value)">
+        <span class="dim-unit">mm</span>
+      </div>
+      <div class="dim-row">
+        <label>Chu</label>
+        <input type="range" id="sld" min="20" max="200" step="1" value="70" oninput="syncDim('d',this.value)">
+        <input class="num" id="nd" type="number" min="20" max="200" value="70" oninput="syncDim('d',this.value)">
+        <span class="dim-unit">mm</span>
+      </div>
+      <div class="tr" style="margin-top:3px">
+        Proporsiya saqlash
+        <div class="tog" id="tog-lock" onclick="togLock()"></div>
+      </div>
+      <div class="preset-row">
+        <div class="preset-btn" onclick="setPreset(180,100,70)">180×100×70</div>
+        <div class="preset-btn" onclick="setPreset(160,90,60)">160×90×60</div>
+        <div class="preset-btn" onclick="setPreset(200,110,80)">200×110×80</div>
+        <div class="preset-btn" onclick="setPreset(120,80,50)">120×80×50</div>
+      </div>
+    </div>
+
+    <!-- Background -->
+    <div class="rps">
+      <h3>Orqa fon</h3>
+      <div class="bg-grid">
+        <div class="bg-swatch sel" id="bg-dark"   style="background:#07050a;border-color:#555" title="Qora studio"    onclick="setBg('dark')"></div>
+        <div class="bg-swatch" id="bg-light"  style="background:linear-gradient(135deg,#d8d0c0,#f0ece0);border-color:#999" title="Och studio" onclick="setBg('light')"></div>
+        <div class="bg-swatch" id="bg-white"  style="background:#fff;border-color:#ccc"    title="Oq"           onclick="setBg('white')"></div>
+        <div class="bg-swatch" id="bg-transp" style="background:repeating-conic-gradient(#555 0% 25%,#333 0% 50%) 0 0/10px 10px;border-color:#777" title="Shaffof" onclick="setBg('transparent')"></div>
+        <div class="bg-swatch" id="bg-gold"   style="background:linear-gradient(135deg,#3a2800,#1a1000);border-color:#8a5000" title="Oltin" onclick="setBg('gold')"></div>
+        <div class="bg-swatch" id="bg-blue"   style="background:linear-gradient(135deg,#0a0e1a,#101828);border-color:#204060" title="Ko'k studio" onclick="setBg('blue')"></div>
+        <div class="bg-swatch" id="bg-grad"   style="background:radial-gradient(ellipse at center,#2a2030,#080608);border-color:#604080" title="Gradient" onclick="setBg('grad')"></div>
+        <div class="bg-swatch" id="bg-custom" style="background:#c83050;border-color:#c83050" title="Rang tanlash" onclick="document.getElementById('bg-color-inp').click()">
+          <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2.5" style="padding:5px"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        </div>
+      </div>
+      <div class="color-pick-row">
+        <label>Maxsus rang</label>
+        <input type="color" id="bg-color-inp" value="#c83050" onchange="setBgCustom(this.value)"/>
+      </div>
+    </div>
+
+    <!-- Lighting -->
+    <div class="rps">
+      <h3>Yoritish</h3>
+      <div class="sr"><label>Yorqinlik <span id="vbr">1.2</span></label><input type="range" id="slbr" min=".2" max="3" step=".05" value="1.2" oninput="updLight()"></div>
+      <div class="sr"><label>Aks (metallic) <span id="venvi">.4</span></label><input type="range" id="slenvi" min="0" max="2" step=".05" value=".4" oninput="updLight()"></div>
+      <div class="tr">Soya<div class="tog on" id="tog-sh" onclick="togSh()"></div></div>
+      <div class="tr">Avto-aylantir<div class="tog on" id="tog-au" onclick="togAu()"></div></div>
+    </div>
+
+    <!-- Export quality -->
+    <div class="rps">
+      <h3>Sifat / Eksport</h3>
+      <div class="q-row">
+        <div class="q-btn" id="q-1k" onclick="setQ('1k')">1K</div>
+        <div class="q-btn sel" id="q-2k" onclick="setQ('2k')">2K</div>
+        <div class="q-btn" id="q-4k" onclick="setQ('4k')">4K</div>
+      </div>
+      <button class="rbtn gold" onclick="shotHQ('png')">PNG 2K saqlash</button>
+      <button class="rbtn gold" onclick="shotHQ('jpg')">JPEG 2K saqlash</button>
+      <button class="rbtn tr"   onclick="shotHQ('png',true)">PNG Shaffof fon</button>
+      <button class="rbtn dk"   onclick="shotAll()">Barcha 6 rakurs (2K)</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="sbar">
+  <span>Chap klik: aylantirish | Scroll: zoom | O'ng klik: siljitish</span>
+  <span id="sbr">–</span>
+</div>
+
+<input type="file" id="finp" accept="image/*" style="display:none"/>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+// ═══════════════════════════════════════════
+// FACE META
+// ═══════════════════════════════════════════
+const FACE_META=[
+  {id:'front', label:'Old (UROSIMAG)',  color:'rgba(60,200,90,.35)',  stroke:'#3dc85a', si:4},
+  {id:'back',  label:'Orqa (Tarkib)',   color:'rgba(60,110,220,.35)', stroke:'#4070e8', si:5},
+  {id:'right', label:"O'ng yon",        color:'rgba(220,70,70,.35)',  stroke:'#e04646', si:0},
+  {id:'left',  label:'Chap yon',        color:'rgba(220,160,30,.35)', stroke:'#dca020', si:1},
+  {id:'top',   label:'Yuqori',          color:'rgba(160,70,220,.35)', stroke:'#a046dc', si:2},
+  {id:'bottom',label:'Pastki',          color:'rgba(40,200,200,.35)', stroke:'#28c8c8', si:3},
+];
+
+const crops={
+  front: {x:.22,y:.40,w:.55,h:.30},
+  back:  {x:.01,y:.03,w:.48,h:.36},
+  right: {x:.76,y:.03,w:.22,h:.64},
+  left:  {x:.01,y:.40,w:.21,h:.30},
+  top:   {x:.22,y:.03,w:.55,h:.065},
+  bottom:{x:.01,y:.72,w:.55,h:.26},
+};
+
+let srcImg=null, selFace='front';
+
+// ═══════════════════════════════════════════
+// DIELINE EDITOR
+// ═══════════════════════════════════════════
+const dlWrap=document.getElementById('dl-canvas-wrap');
+const dlCanvas=document.getElementById('dl-canvas');
+const dlCtx=dlCanvas.getContext('2d');
+let drag=null;
+const HR=7;
+
+function drawDieline(){
+  const wr=dlWrap.getBoundingClientRect();
+  const cw=wr.width||380, ch=wr.height||400;
+  dlCanvas.width=cw; dlCanvas.height=ch;
+  dlCtx.clearRect(0,0,cw,ch);
+
+  if(!srcImg){
+    dlCtx.fillStyle='#0e0a02';
+    dlCtx.fillRect(0,0,cw,ch);
+    dlCtx.fillStyle='#4a3010';
+    dlCtx.font='13px Segoe UI';
+    dlCtx.textAlign='center';
+    dlCtx.fillText('Shablon rasmini yuklang',cw/2,ch/2);
+    dlCtx.textAlign='left';
+    return;
+  }
+
+  const sc=Math.min(cw/srcImg.width,ch/srcImg.height);
+  const dw=srcImg.width*sc, dh=srcImg.height*sc;
+  const ox=(cw-dw)/2, oy=(ch-dh)/2;
+
+  // Store for coord conversion
+  dlCanvas._ox=ox; dlCanvas._oy=oy; dlCanvas._sc=sc;
+
+  dlCtx.drawImage(srcImg,ox,oy,dw,dh);
+
+  for(const fm of FACE_META){
+    const f=crops[fm.id];
+    const px=ox+f.x*dw, py=oy+f.y*dh, pw=f.w*dw, ph=f.h*dh;
+    const sel=fm.id===selFace;
+    dlCtx.fillStyle=fm.color;
+    dlCtx.fillRect(px,py,pw,ph);
+    dlCtx.strokeStyle=fm.stroke;
+    dlCtx.lineWidth=sel?2.5:1.5;
+    dlCtx.setLineDash(sel?[]:[4,3]);
+    dlCtx.strokeRect(px,py,pw,ph);
+    dlCtx.setLineDash([]);
+    dlCtx.fillStyle=fm.stroke;
+    dlCtx.font=`bold ${sel?11:9}px Segoe UI`;
+    dlCtx.fillText(fm.label,px+4,py+13);
+    if(sel) drawHandles(px,py,pw,ph,fm.stroke);
+  }
+}
+
+function drawHandles(px,py,pw,ph,col){
+  const pts=getHPts(px,py,pw,ph);
+  for(const h of pts){
+    dlCtx.fillStyle=col;
+    dlCtx.strokeStyle='#fff';
+    dlCtx.lineWidth=1;
+    dlCtx.beginPath();
+    dlCtx.arc(h.px,h.py,HR/2+1,0,Math.PI*2);
+    dlCtx.fill(); dlCtx.stroke();
+  }
+}
+
+function getHPts(px,py,pw,ph){
+  const cx=px+pw/2, cy=py+ph/2, r=px+pw, b=py+ph;
+  return[
+    {id:'nw',px,py},{id:'n',px:cx,py},{id:'ne',px:r,py},
+    {id:'e',px:r,py:cy},{id:'se',px:r,py:b},{id:'s',px:cx,py:b},
+    {id:'sw',px,py:b},{id:'w',px,py:cy},
+  ];
+}
+
+function getFacePx(fid){
+  if(!srcImg) return null;
+  const wr=dlWrap.getBoundingClientRect();
+  const cw=wr.width, ch=wr.height;
+  const sc=Math.min(cw/srcImg.width,ch/srcImg.height);
+  const dw=srcImg.width*sc, dh=srcImg.height*sc;
+  const ox=(cw-dw)/2, oy=(ch-dh)/2;
+  const f=crops[fid];
+  return{px:ox+f.x*dw, py:oy+f.y*dh, pw:f.w*dw, ph:f.h*dh, ox,oy,dw,dh};
+}
+
+dlCanvas.addEventListener('mousedown',e=>{
+  if(!srcImg) return;
+  const r=dlCanvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const p=getFacePx(selFace);
+  if(!p) return;
+  const hid=hitHandle(mx,my,p);
+  if(hid){
+    drag={type:'resize',face:selFace,hid,sc:p,sx:mx,sy:my,orig:{...crops[selFace]}};
+    return;
+  }
+  for(const fm of [...FACE_META].reverse()){
+    const fp=getFacePx(fm.id);
+    if(mx>=fp.px&&mx<=fp.px+fp.pw&&my>=fp.py&&my<=fp.py+fp.ph){
+      selFace=fm.id;
+      updateLegend(); drawDieline();
+      drag={type:'move',face:fm.id,sx:mx,sy:my,sc:fp,orig:{...crops[fm.id]}};
+      return;
+    }
+  }
+});
+
+window.addEventListener('mousemove',e=>{
+  if(!drag||!srcImg) return;
+  const r=dlCanvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const {sc,orig}=drag;
+  const ddx=(mx-drag.sx)/sc.dw, ddy=(my-drag.sy)/sc.dh;
+  const MIN=0.02;
+
+  if(drag.type==='move'){
+    crops[drag.face]={x:Math.max(0,Math.min(1-orig.w,orig.x+ddx)),y:Math.max(0,Math.min(1-orig.h,orig.y+ddy)),w:orig.w,h:orig.h};
+  } else {
+    let {x,y,w,h}={x:orig.x,y:orig.y,w:orig.w,h:orig.h};
+    const hd=drag.hid;
+    if(hd.includes('w')){const nw=w-ddx;if(nw>MIN){x=orig.x+ddx;w=nw;}}
+    if(hd.includes('e')){w=Math.max(MIN,orig.w+ddx);}
+    if(hd.includes('n')){const nh=h-ddy;if(nh>MIN){y=orig.y+ddy;h=nh;}}
+    if(hd.includes('s')){h=Math.max(MIN,orig.h+ddy);}
+    crops[drag.face]={x,y,w,h};
+  }
+  drawDieline();
+  updateBoxDims();
+  debouncedApply();
+});
+
+window.addEventListener('mouseup',()=>{drag=null;});
+
+dlCanvas.addEventListener('mousemove',e=>{
+  if(drag||!srcImg) return;
+  const r=dlCanvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const p=getFacePx(selFace);
+  if(!p) return;
+  const hid=hitHandle(mx,my,p);
+  if(hid){
+    const cur={nw:'nw-resize',n:'n-resize',ne:'ne-resize',e:'e-resize',se:'se-resize',s:'s-resize',sw:'sw-resize',w:'w-resize'};
+    dlCanvas.style.cursor=cur[hid]||'crosshair'; return;
+  }
+  let onFace=false;
+  for(const fm of FACE_META){
+    const fp=getFacePx(fm.id);
+    if(mx>=fp.px&&mx<=fp.px+fp.pw&&my>=fp.py&&my<=fp.py+fp.ph){onFace=true;break;}
+  }
+  dlCanvas.style.cursor=onFace?'move':'crosshair';
+});
+
+function hitHandle(mx,my,p){
+  for(const h of getHPts(p.px,p.py,p.pw,p.ph)){
+    const dx=mx-h.px,dy=my-h.py;
+    if(dx*dx+dy*dy<(HR+2)*(HR+2)) return h.id;
+  }
+  return null;
+}
+
+// ── Auto detect ──
+function autoDetect(){
+  if(!srcImg){flash('Avval rasm yuklang!',1800);return;}
+  const W=srcImg.width,H=srcImg.height;
+  const oc=document.createElement('canvas');oc.width=W;oc.height=H;
+  const ox=oc.getContext('2d'); ox.drawImage(srcImg,0,0);
+  const d=ox.getImageData(0,0,W,H).data;
+
+  const rowD=new Float32Array(H), colD=new Float32Array(W);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4;
+    if(d[i+3]<10||(d[i]>238&&d[i+1]>238&&d[i+2]>238)) continue;
+    rowD[y]++; colD[x]++;
+  }
+  for(let y=0;y<H;y++) rowD[y]/=W;
+  for(let x=0;x<W;x++) colD[x]/=H;
+
+  // Bounding box
+  const TH=0.008;
+  let t=0,b=H-1,l=0,r=W-1;
+  while(t<H&&rowD[t]<TH)t++;
+  while(b>t&&rowD[b]<TH)b--;
+  while(l<W&&colD[l]<TH)l++;
+  while(r>l&&colD[r]<TH)r--;
+
+  const hSegs=findSegs(rowD,t,b,TH);
+  const vSegs=findSegs(colD,l,r,TH);
+
+  if(hSegs.length>=2&&vSegs.length>=2){
+    hSegs.sort((a,b)=>a[0]-b[0]); vSegs.sort((a,b)=>a[0]-b[0]);
+
+    // Largest hSeg = main row (front face)
+    const mainH=hSegs.reduce((a,b)=>(b[1]-b[0])>(a[1]-a[0])?b:a);
+    const mainHi=hSegs.indexOf(mainH);
+    // Widest vSeg = front face column
+    const mainV=vSegs.reduce((a,b)=>(b[1]-b[0])>(a[1]-a[0])?b:a);
+    const mainVi=vSegs.indexOf(mainV);
+
+    setCrop('front', mainV[0]/W, mainH[0]/H, (mainV[1]-mainV[0])/W, (mainH[1]-mainH[0])/H);
+
+    // Left side = vSeg left of front, same h row
+    if(mainVi>0){
+      const lv=vSegs[mainVi-1];
+      setCrop('left', lv[0]/W, mainH[0]/H, (lv[1]-lv[0])/W, (mainH[1]-mainH[0])/H);
+    }
+
+    // Top = narrow hSeg above main row, overlapping front column
+    const topBands=hSegs.filter(s=>s[1]<mainH[0]+10);
+    if(topBands.length){
+      const tb=topBands.reduce((a,b)=>(b[1]-b[0])<(a[1]-a[0])?b:a);
+      setCrop('top', mainV[0]/W, tb[0]/H, (mainV[1]-mainV[0])/W, (tb[1]-tb[0])/H);
+    }
+
+    // Back = largest hSeg != main, above main
+    const backCands=hSegs.filter(s=>s!==mainH&&s[0]<mainH[0]);
+    if(backCands.length){
+      const bh=backCands.reduce((a,b)=>(b[1]-b[0])>(a[1]-a[0])?b:a);
+      // widest vSeg or whole width for back
+      const bv=vSegs.reduce((a,b)=>(b[1]-b[0])>(a[1]-a[0])?b:a);
+      setCrop('back', l/W, bh[0]/H, (r-l)/W, (bh[1]-bh[0])/H);
+    }
+
+    // Right side = vSeg right of front, spanning most height
+    const rightCands=vSegs.filter((_,i)=>i>mainVi);
+    if(rightCands.length){
+      const rv=rightCands[0];
+      const totalH=hSegs.reduce((acc,s)=>acc+(s[1]-s[0]),0);
+      setCrop('right', rv[0]/W, t/H, (rv[1]-rv[0])/W, (b-t)/H);
+    }
+
+    // Bottom = largest hSeg below main row
+    const botCands=hSegs.filter(s=>s[0]>mainH[1]-10&&s!==mainH);
+    if(botCands.length){
+      const bb=botCands.reduce((a,b)=>(b[1]-b[0])>(a[1]-a[0])?b:a);
+      setCrop('bottom', l/W, bb[0]/H, (r-l)/W, (bb[1]-bb[0])/H);
+    }
+
+    updateBoxDims();
+    drawDieline();
+    applyAll();
+    flash('Avtomatik aniqlandi!',2000);
+  } else {
+    flash("Aniqlab bo'lmadi — qo'lda sozlang",2500);
+  }
+}
+
+function findSegs(arr,start,end,thresh){
+  const segs=[]; let inS=false,ss=0;
+  for(let i=start;i<=end;i++){
+    if(!inS&&arr[i]>thresh){inS=true;ss=i;}
+    else if(inS&&arr[i]<=thresh){if(i-ss>3)segs.push([ss,i]);inS=false;}
+  }
+  if(inS&&end-ss>3)segs.push([ss,end]);
+  return segs;
+}
+
+function setCrop(face,x,y,w,h){
+  const P=0.004;
+  crops[face]={x:Math.max(0,x+P),y:Math.max(0,y+P),w:Math.max(0.02,w-P*2),h:Math.max(0.02,h-P*2)};
+}
+
+// ── Apply crops ──
+function cropToDataURL(face){
+  if(!srcImg) return null;
+  const f=crops[face];
+  const sx=f.x*srcImg.width, sy=f.y*srcImg.height;
+  const sw=f.w*srcImg.width, sh=f.h*srcImg.height;
+  if(sw<2||sh<2) return null;
+  // High-res crop (2x source)
+  const c=document.createElement('canvas');
+  c.width=Math.round(sw); c.height=Math.round(sh);
+  c.getContext('2d').drawImage(srcImg,sx,sy,sw,sh,0,0,c.width,c.height);
+  return c.toDataURL('image/png');
+}
+
+function applyAll(){
+  if(!srcImg) return;
+  for(const fm of FACE_META){
+    const url=cropToDataURL(fm.id);
+    if(url) applyTex(fm.id,url);
+  }
+  document.getElementById('over').classList.add('hide');
+}
+
+let applyTimer=null;
+function debouncedApply(){clearTimeout(applyTimer);applyTimer=setTimeout(applyAll,180);}
+
+// ── Dimension sync from crops ──
+function updateBoxDims(){
+  if(!srcImg) return;
+  const fw=crops.front.w*srcImg.width, fh=crops.front.h*srcImg.height;
+  const dw=crops.left.w*srcImg.width;
+  // Normalize: front height → box H dimension
+  const sc=1/fh;
+  const W3=fw*sc, D3=dw*sc; // relative to H=1
+  // Convert to mm assuming H=100mm
+  const H_MM=100;
+  const W_MM=Math.round(W3*H_MM);
+  const D_MM=Math.round(D3*H_MM);
+  setDimMM(W_MM,H_MM,D_MM);
+}
+
+// ── Legend ──
+function buildLegend(){
+  const leg=document.getElementById('face-legend');
+  leg.innerHTML='';
+  for(const fm of FACE_META){
+    const el=document.createElement('div');
+    el.className='fl-item'+(selFace===fm.id?' sel':'');
+    el.style.borderColor=fm.stroke+'55';
+    el.innerHTML=`<div class="fl-dot" style="background:${fm.stroke}"></div><span style="color:${fm.stroke}">${fm.label}</span>`;
+    el.onclick=()=>{selFace=fm.id;updateLegend();drawDieline();};
+    leg.appendChild(el);
+  }
+}
+function updateLegend(){
+  document.querySelectorAll('.fl-item').forEach((el,i)=>el.classList.toggle('sel',FACE_META[i].id===selFace));
+}
+
+// ═══════════════════════════════════════════
+// THREE.JS
+// ═══════════════════════════════════════════
+let scene,camera,renderer,boxMesh;
+let autoRot=true, shadowOn=true, lockProp=false;
+const texCache={};
+let BOX_W=1.80,BOX_H=1.00,BOX_D=0.70; // in Three units (1 unit = 100mm)
+const faceIdx={right:0,left:1,top:2,bottom:3,front:4,back:5};
+
+let exportQ=2048; // 2K default
+let bgMode='dark';
+
+// ── BG configs ──
+const BG_CONFIGS={
+  dark:  {color:0x07050a,fogColor:0x07050a,alpha:1},
+  light: {color:0xe8e0d0,fogColor:0xe8e0d0,alpha:1},
+  white: {color:0xffffff,fogColor:0xffffff,alpha:1},
+  gold:  {color:0x140e00,fogColor:0x140e00,alpha:1},
+  blue:  {color:0x0a0e1a,fogColor:0x0a0e1a,alpha:1},
+  grad:  {color:0x180d20,fogColor:0x180d20,alpha:1},
+  transparent:{color:0x000000,fogColor:null,alpha:0},
+  custom:{color:0xc83050,fogColor:0xc83050,alpha:1},
+};
+
+function initThree(){
+  const cont=document.getElementById('v3d');
+  const W=cont.clientWidth||600, H=cont.clientHeight||400;
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(BG_CONFIGS.dark.color);
+
+  camera=new THREE.PerspectiveCamera(42,W/H,.1,100);
+  camera.position.set(3.2,2,3.8);
+
+  renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,alpha:true});
+  renderer.setSize(W,H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.3;
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  cont.appendChild(renderer.domElement);
+
+  // Lights
+  const amb=new THREE.AmbientLight(0xfff5d0,.55); amb.name='amb'; scene.add(amb);
+  const dl=new THREE.DirectionalLight(0xfff0c0,2.8);
+  dl.position.set(3,5,4); dl.castShadow=true;
+  dl.shadow.mapSize.width=dl.shadow.mapSize.height=2048;
+  dl.shadow.camera.near=.1; dl.shadow.camera.far=30;
+  dl.shadow.bias=-.001; dl.name='dl'; scene.add(dl);
+  const fl=new THREE.DirectionalLight(0xc0d0ff,.7); fl.position.set(-3,2,-2); scene.add(fl);
+  const rl=new THREE.DirectionalLight(0xffd080,.35); rl.position.set(0,-3,-4); scene.add(rl);
+
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.ShadowMaterial({opacity:.22}));
+  gnd.rotation.x=-Math.PI/2; gnd.position.y=-BOX_H/2-.02;
+  gnd.receiveShadow=true; gnd.name='gnd'; scene.add(gnd);
+
+  buildBox();
+  setupOrbit();
+  window.addEventListener('resize',onResize);
+  animate();
+}
+
+function defMat(col,r=.28){return new THREE.MeshStandardMaterial({color:col,roughness:r,metalness:.04});}
+
+function buildBox(){
+  if(boxMesh) scene.remove(boxMesh);
+  boxMesh=new THREE.Mesh(
+    new THREE.BoxGeometry(BOX_W,BOX_H,BOX_D),
+    [
+      texCache.right ||defMat(0xcca840),
+      texCache.left  ||defMat(0xcca840),
+      texCache.top   ||defMat(0xf0e0b8,.2),
+      texCache.bottom||defMat(0x5a4008),
+      texCache.front ||defMat(0xf5eccc,.18),
+      texCache.back  ||defMat(0xcca840),
+    ]
+  );
+  boxMesh.castShadow=boxMesh.receiveShadow=true;
+  scene.add(boxMesh);
+  const gnd=scene.getObjectByName('gnd');
+  if(gnd) gnd.position.y=-BOX_H/2-.02;
+}
+
+// ── Dimension controls ──
+function setDimMM(w,h,d){
+  w=Math.max(50,Math.min(400,Math.round(w)));
+  h=Math.max(30,Math.min(250,Math.round(h)));
+  d=Math.max(20,Math.min(200,Math.round(d)));
+  document.getElementById('slw').value=w;
+  document.getElementById('slh').value=h;
+  document.getElementById('sld').value=d;
+  document.getElementById('nw').value=w;
+  document.getElementById('nh').value=h;
+  document.getElementById('nd').value=d;
+  BOX_W=w/100; BOX_H=h/100; BOX_D=d/100;
+  buildBox();
+}
+
+function syncDim(axis,val){
+  val=parseFloat(val)||1;
+  const wv=parseInt(document.getElementById('slw').value);
+  const hv=parseInt(document.getElementById('slh').value);
+  const dv=parseInt(document.getElementById('sld').value);
+
+  if(lockProp){
+    const scale=val/(axis==='w'?wv:axis==='h'?hv:dv);
+    const nw=Math.round(wv*scale), nh=Math.round(hv*scale), nd=Math.round(dv*scale);
+    setDimMM(nw,nh,nd);
+  } else {
+    const nw=axis==='w'?val:wv;
+    const nh=axis==='h'?val:hv;
+    const nd=axis==='d'?val:dv;
+    setDimMM(nw,nh,nd);
+  }
+}
+
+function setPreset(w,h,d){setDimMM(w,h,d);}
+
+function togLock(){
+  lockProp=!lockProp;
+  document.getElementById('tog-lock').classList.toggle('on',lockProp);
+}
+
+// ── Textures ──
+function applyTex(faceName,dataURL){
+  new THREE.TextureLoader().load(dataURL,tex=>{
+    tex.encoding=THREE.sRGBEncoding;
+    tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    tex.generateMipmaps=true;
+    tex.minFilter=THREE.LinearMipmapLinearFilter;
+    tex.magFilter=THREE.LinearFilter;
+    const mat=new THREE.MeshStandardMaterial({
+      map:tex,roughness:.18,metalness:.04,
+      envMapIntensity:parseFloat(document.getElementById('slenvi').value)||.4
+    });
+    texCache[faceName]=mat;
+    if(boxMesh&&Array.isArray(boxMesh.material)){
+      boxMesh.material[faceIdx[faceName]]=mat;
+      boxMesh.material[faceIdx[faceName]].needsUpdate=true;
+    }
+  });
+}
+
+// ── Background ──
+function setBg(mode){
+  bgMode=mode;
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('sel'));
+  const el=document.getElementById('bg-'+mode);
+  if(el) el.classList.add('sel');
+
+  const cfg=BG_CONFIGS[mode]||BG_CONFIGS.dark;
+  if(mode==='transparent'){
+    scene.background=null;
+    scene.fog=null;
+    renderer.setClearAlpha(0);
+  } else {
+    const col=new THREE.Color(cfg.color);
+    scene.background=col;
+    scene.fog=new THREE.Fog(col,8,22);
+    renderer.setClearColor(col,1);
+  }
+}
+
+function setBgCustom(hex){
+  const col=parseInt(hex.replace('#',''),16);
+  BG_CONFIGS.custom.color=col;
+  document.getElementById('bg-custom').style.background=hex;
+  document.getElementById('bg-custom').style.borderColor=hex;
+  setBg('custom');
+}
+
+// ── Lighting ──
+function updLight(){
+  const b=parseFloat(document.getElementById('slbr').value);
+  const ei=parseFloat(document.getElementById('slenvi').value);
+  document.getElementById('vbr').textContent=b.toFixed(2);
+  document.getElementById('venvi').textContent=ei.toFixed(2);
+  const dl=scene.getObjectByName('dl'); if(dl) dl.intensity=b*2.8;
+  const amb=scene.getObjectByName('amb'); if(amb) amb.intensity=b*.55;
+  renderer.toneMappingExposure=b*.9+.35;
+  if(boxMesh&&Array.isArray(boxMesh.material))
+    boxMesh.material.forEach(m=>{if(m&&m.envMapIntensity!==undefined)m.envMapIntensity=ei;});
+}
+
+function togSh(){shadowOn=!shadowOn;document.getElementById('tog-sh').classList.toggle('on',shadowOn);renderer.shadowMap.enabled=shadowOn;const dl=scene.getObjectByName('dl');if(dl)dl.castShadow=shadowOn;const gnd=scene.getObjectByName('gnd');if(gnd)gnd.visible=shadowOn;}
+function togAu(){autoRot=!autoRot;document.getElementById('tog-au').classList.toggle('on',autoRot);}
+
+// ── Quality selector ──
+function setQ(q){
+  document.querySelectorAll('.q-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('q-'+q).classList.add('sel');
+  exportQ={  '1k':1024,'2k':2048,'4k':4096}[q]||2048;
+  // Update button labels
+  const ql=q.toUpperCase();
+  document.querySelector('.rbtn.gold').textContent=`PNG ${ql} saqlash`;
+  document.querySelectorAll('.rbtn.gold')[1].textContent=`JPEG ${ql} saqlash`;
+  document.querySelector('.rbtn.dk').textContent=`Barcha 6 rakurs (${ql})`;
+}
+
+// ── Orbit ──
+let sph={theta:.9,phi:1.05,r:5.2};
+let pan=new THREE.Vector3();
+let mst={dn:false,rt:false,lx:0,ly:0};
+
+function setupOrbit(){
+  const el=renderer.domElement;
+  el.addEventListener('mousedown',e=>{
+    if(e.button===0) mst.dn=true;
+    if(e.button===2) mst.rt=true;
+    mst.lx=e.clientX; mst.ly=e.clientY;
+    autoRot=false; document.getElementById('tog-au').classList.remove('on');
+  });
+  window.addEventListener('mouseup',()=>{mst.dn=mst.rt=false;});
+  window.addEventListener('mousemove',e=>{
+    if(!mst.dn&&!mst.rt)return;
+    const dx=(e.clientX-mst.lx)*.005,dy=(e.clientY-mst.ly)*.005;
+    mst.lx=e.clientX;mst.ly=e.clientY;
+    if(mst.dn){sph.theta-=dx;sph.phi=Math.max(.06,Math.min(Math.PI-.06,sph.phi+dy));}
+    if(mst.rt){pan.x-=dx*sph.r*.3;pan.y+=dy*sph.r*.3;}
+  });
+  el.addEventListener('wheel',e=>{sph.r=Math.max(1.2,Math.min(14,sph.r+e.deltaY*.006));},{passive:true});
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+}
+
+// ── Tween ──
+const VPS={front:[0,0,4.5],back:[0,0,-4.5],left:[-4.5,0,0],right:[4.5,0,0],top:[0,6,.01],iso:[3.2,2,3.8]};
+let tw={on:false,tx:0,ty:0,tz:0};
+function sv(n){const p=VPS[n];if(!p)return;tw={on:true,tx:p[0],ty:p[1],tz:p[2],t:0};autoRot=false;document.getElementById('tog-au').classList.remove('on');}
+
+let lt2=0;
+function animate(ts=0){
+  requestAnimationFrame(animate);
+  const dt=(ts-lt2)/1000; lt2=ts;
+  if(autoRot) sph.theta+=dt*.28;
+  if(tw.on){
+    tw.t=Math.min(1,tw.t+dt*1.3);
+    const v=new THREE.Vector3(tw.tx,tw.ty,tw.tz);
+    sph.r=v.length(); sph.phi=Math.acos(Math.max(-1,Math.min(1,v.y/sph.r)));
+    sph.theta=Math.atan2(v.x,v.z);
+    if(tw.t>=1)tw.on=false;
+  }
+  const sp=Math.sin(sph.phi);
+  camera.position.set(sph.r*sp*Math.sin(sph.theta)+pan.x,sph.r*Math.cos(sph.phi)+pan.y,sph.r*sp*Math.cos(sph.theta));
+  camera.lookAt(pan.x,pan.y,0);
+  renderer.render(scene,camera);
+  const az=(sph.theta*180/Math.PI%360).toFixed(0);
+  document.getElementById('sbr').textContent=`Az:${az}° | Zoom:${sph.r.toFixed(1)}x | ${BOX_W*100|0}×${BOX_H*100|0}×${BOX_D*100|0}mm`;
+}
+
+function onResize(){
+  const c=document.getElementById('v3d');
+  camera.aspect=c.clientWidth/c.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(c.clientWidth,c.clientHeight);
+  drawDieline();
+}
+
+// ═══════════════════════════════════════════
+// HIGH QUALITY SCREENSHOT
+// ═══════════════════════════════════════════
+async function shotHQ(fmt, transparent=false){
+  const cont=document.getElementById('v3d');
+  const origW=cont.clientWidth, origH=cont.clientHeight;
+  const aspect=origW/origH;
+  const newW=exportQ;
+  const newH=Math.round(newW/aspect);
+
+  // Scale up renderer
+  renderer.setSize(newW,newH);
+  renderer.setPixelRatio(1);
+  camera.aspect=newW/newH;
+  camera.updateProjectionMatrix();
+
+  // Handle background
+  const origBg=scene.background, origFog=scene.fog;
+  if(transparent){
+    scene.background=null;
+    scene.fog=null;
+    renderer.setClearColor(0x000000,0);
+  }
+
+  renderer.render(scene,camera);
+  const mime=fmt==='jpg'?'image/jpeg':'image/png';
+  const url=renderer.domElement.toDataURL(mime, fmt==='jpg'?.95:1.0);
+
+  // Restore
+  renderer.setSize(origW,origH);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  camera.aspect=origW/origH;
+  camera.updateProjectionMatrix();
+  if(transparent){
+    scene.background=origBg; scene.fog=origFog;
+    const cfg=BG_CONFIGS[bgMode]||BG_CONFIGS.dark;
+    if(bgMode!=='transparent') renderer.setClearColor(new THREE.Color(cfg.color),1);
+  }
+  renderer.render(scene,camera);
+
+  const az=(sph.theta*180/Math.PI%360).toFixed(0);
+  const suffix=transparent?'_transparent':'';
+  const a=document.createElement('a');
+  a.download=`urosimag_${exportQ/1024}K_az${az}${suffix}.${fmt}`;
+  a.href=url; a.click();
+  flash(`Saqlandi! (${newW}×${newH}px)`,2200);
+}
+
+const ALLV=[
+  {n:'front',p:[0,0,4.5]},{n:'back',p:[0,0,-4.5]},
+  {n:'left',p:[-4.5,0,0]},{n:'right',p:[4.5,0,0]},
+  {n:'top',p:[0,6,.01]},{n:'iso',p:[3.2,2,3.8]}
+];
+
+async function shotAll(){
+  const ar=autoRot; autoRot=false;
+  for(let i=0;i<ALLV.length;i++){
+    const v=ALLV[i];
+    flash(`${v.n} saqlanyapti... (${i+1}/6)`,1400);
+    const vec=new THREE.Vector3(...v.p);
+    sph.r=vec.length(); sph.phi=Math.acos(Math.max(-1,Math.min(1,vec.y/sph.r)));
+    sph.theta=Math.atan2(vec.x,vec.z);
+    await new Promise(r=>setTimeout(r,130));
+
+    const cont=document.getElementById('v3d');
+    const ow=cont.clientWidth, oh=cont.clientHeight;
+    renderer.setSize(exportQ,Math.round(exportQ/ow*oh));
+    renderer.setPixelRatio(1);
+    camera.aspect=ow/oh; camera.updateProjectionMatrix();
+    renderer.render(scene,camera);
+    const url=renderer.domElement.toDataURL('image/png',1.0);
+    renderer.setSize(ow,oh); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    camera.aspect=ow/oh; camera.updateProjectionMatrix();
+
+    const a=document.createElement('a');
+    a.download=`urosimag_${exportQ/1024}K_${v.n}.png`; a.href=url; a.click();
+    await new Promise(r=>setTimeout(r,300));
+  }
+  flash(`Barcha 6 rakurs (${exportQ/1024}K) saqlandi!`,2800);
+  autoRot=ar;
+}
+
+// ═══════════════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════════════
+document.getElementById('finp').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const url=URL.createObjectURL(f);
+  srcImg=new Image();
+  srcImg.onload=()=>{ drawDieline(); autoDetect(); };
+  srcImg.src=url;
+  e.target.value='';
+});
+
+const dz=document.getElementById('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dov');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dov'));
+dz.addEventListener('drop',e=>{
+  e.preventDefault();dz.classList.remove('dov');
+  const f=e.dataTransfer.files[0];
+  if(!f||!f.type.startsWith('image/'))return;
+  srcImg=new Image();
+  srcImg.onload=()=>{drawDieline();autoDetect();};
+  srcImg.src=URL.createObjectURL(f);
+});
+dz.addEventListener('click',trigUpload);
+function trigUpload(){document.getElementById('finp').click();}
+
+// ═══════════════════════════════════════════
+// DEMO
+// ═══════════════════════════════════════════
+function runDemo(){
+  function mk(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);return c.toDataURL();}
+  const front=mk(512,300,(ctx,w,h)=>{
+    const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#faf3e0');g.addColorStop(1,'#ecdda0');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    const rg=ctx.createRadialGradient(w*.65,h*.55,5,w*.65,h*.5,h);
+    rg.addColorStop(0,'rgba(195,148,18,.6)');rg.addColorStop(1,'rgba(195,148,18,0)');
+    ctx.fillStyle=rg;ctx.beginPath();ctx.ellipse(w*.64,h*.52,w*.36,h*.5,.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#9a6c08';ctx.font=`bold ${h*.27}px Georgia`;ctx.fillText('UROSIMAG',w*.05,h*.6);
+    ctx.fillStyle='#111';ctx.font=`bold ${h*.09}px 'Segoe UI'`;ctx.fillText('Asia pharm',w*.07,h*.76);
+    ctx.fillStyle='#111';ctx.font=`${h*.08}px 'Segoe UI'`;ctx.fillText('30 KAPSULA',w*.67,h*.12);
+    ctx.strokeStyle='#9a6c08';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(w*.82,h*.46,h*.25,0,Math.PI*2);ctx.stroke();
+  });
+  const back=mk(512,300,(ctx,w,h)=>{
+    ctx.fillStyle='#f5edcf';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#3a2400';ctx.font=`bold ${h*.07}px 'Segoe UI'`;ctx.fillText('Tarkibi / Состав',w*.04,h*.09);
+    ctx.fillStyle='#222';ctx.font=`${h*.053}px 'Segoe UI'`;
+    ['Magniy sitrat – 150mg','Toloknyanka – 80mg','Kukuruza gultoji – 80mg','Ortosifon – 80mg',
+     "Chernika – 60mg","Qoqio't – 40mg","Momaqaymoq – 40mg","Xvosh – 40mg"]
+    .forEach((t,i)=>ctx.fillText(t,w*.04,h*.19+i*h*.088));
+  });
+  const side=mk(210,300,(ctx,w,h)=>{
+    const g=ctx.createLinearGradient(0,0,w,0);g.addColorStop(0,'#c8a030');g.addColorStop(1,'#e0b840');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    ctx.save();ctx.translate(w/2,h/2);ctx.rotate(-Math.PI/2);
+    ctx.fillStyle='rgba(80,40,0,.7)';ctx.font=`bold ${w*.22}px Georgia`;ctx.textAlign='center';ctx.fillText('УРОЦИМАГ',0,8);
+    ctx.restore();
+  });
+  const top=mk(512,65,(ctx,w,h)=>{
+    ctx.fillStyle='#f0e8c0';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#705010';ctx.font=`bold ${h*.38}px 'Segoe UI'`;ctx.fillText('UROSIMAG  ·  Asia pharm  ·  30 KAPSULA',w*.02,h*.72);
+  });
+  const bot=mk(512,190,(ctx,w,h)=>{
+    ctx.fillStyle='#e4d890';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(120,80,10,.15)';ctx.font='bold 12px Georgia';
+    for(let x=0;x<w;x+=86)for(let y=0;y<h;y+=28)ctx.fillText('UROSIMAG',x,y+12);
+  });
+  applyTex('front',front);applyTex('back',back);
+  applyTex('left',side);applyTex('right',side);
+  applyTex('top',top);applyTex('bottom',bot);
+  buildBox();
+  document.getElementById('over').classList.add('hide');
+  flash('Demo rejim',2000);
+}
+
+// ── Mode ──
+function setMode(m){
+  document.getElementById('dl-panel').classList.toggle('hide',m==='3d');
+  document.getElementById('hb-dl').classList.toggle('act',m==='dl');
+  document.getElementById('hb-3d').classList.toggle('act',m==='3d');
+  setTimeout(onResize,60);
+}
+
+// ── Flash ──
+function flash(msg,dur=2000){
+  const el=document.getElementById('flash');
+  el.textContent=msg;el.style.display='block';
+  clearTimeout(flash._t);
+  flash._t=setTimeout(()=>el.style.display='none',dur);
+}
+
+// ── INIT ──
+buildLegend();
+drawDieline();
+initThree();
+window.addEventListener('resize',()=>setTimeout(onResize,50));
+</script>
+</body>
+</html>
