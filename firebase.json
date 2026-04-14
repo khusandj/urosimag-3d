@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "urosimag-3d",
+    "site": "box-view-3d",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [

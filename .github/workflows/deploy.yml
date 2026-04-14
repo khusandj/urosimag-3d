@@ -33,6 +33,7 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ''
           projectId: urosimag-3d
+          target: box-view-3d
           channelId: preview-${{ github.event.number }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
