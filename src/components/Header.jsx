@@ -16,7 +16,7 @@ export default function Header() {
     }}>
       <div>
         <h1 style={{ fontSize: 14, color: '#d4a030', letterSpacing: 2, fontWeight: 700 }}>
-          UROSIMAG 3D BOX VIEWER
+          3D BOX VIEW
         </h1>
         <p style={{ fontSize: 10, color: '#806030', marginTop: 2 }}>
           Dieline → Avtomatik 3D Karobka · 2K / 4K Export

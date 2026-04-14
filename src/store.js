@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 export const FACE_META = [
-  { id: 'front',  label: 'Old (UROSIMAG)', color: 'rgba(60,200,90,.35)',  stroke: '#3dc85a', threeIdx: 4 },
+  { id: 'front',  label: 'Old (Front)', color: 'rgba(60,200,90,.35)',  stroke: '#3dc85a', threeIdx: 4 },
   { id: 'back',   label: 'Orqa (Tarkib)',  color: 'rgba(60,110,220,.35)', stroke: '#4070e8', threeIdx: 5 },
   { id: 'right',  label: "O'ng yon",       color: 'rgba(220,70,70,.35)',  stroke: '#e04646', threeIdx: 0 },
   { id: 'left',   label: 'Chap yon',       color: 'rgba(220,160,30,.35)', stroke: '#dca020', threeIdx: 1 },
