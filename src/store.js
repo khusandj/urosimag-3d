@@ -88,9 +88,22 @@ const useStore = create((set, get) => ({
   customBgColor: '#c83050',
   autoRotate:    true,
   shadowEnabled: true,
+  shadowOpacity: 0.20,
   brightness:    1.2,
   envIntensity:  0.6,
+  envPreset:     'studio',
   fov:           42,
+
+  // ── Yorug'lik nazorati ──
+  lightAzimuth:   45,    // gorizontal burchak -180..180
+  lightElevation: 58,    // vertikal burchak 0..90
+  lightColor:    '#fff8e0',
+  lightIntensity: 2.6,
+  ambientColor:  '#fff5d0',
+  ambientIntensity: 0.45,
+  rimLight:       true,
+  rimIntensity:   0.65,
+  rimColor:      '#c0d8ff',
 
   // ── Loading ──
   isLoading: false,
@@ -171,8 +184,19 @@ const useStore = create((set, get) => ({
     set({ customBgColor: hex, bgMode: 'custom' })
   },
 
-  setBrightness:    (v) => set({ brightness: v }),
-  setEnvIntensity:  (v) => set({ envIntensity: v }),
+  setBrightness:      (v) => set({ brightness: v }),
+  setEnvIntensity:    (v) => set({ envIntensity: v }),
+  setEnvPreset:       (v) => set({ envPreset: v }),
+  setShadowOpacity:   (v) => set({ shadowOpacity: v }),
+  setLightAzimuth:    (v) => set({ lightAzimuth: v }),
+  setLightElevation:  (v) => set({ lightElevation: v }),
+  setLightColor:      (v) => set({ lightColor: v }),
+  setLightIntensity:  (v) => set({ lightIntensity: v }),
+  setAmbientColor:    (v) => set({ ambientColor: v }),
+  setAmbientIntensity:(v) => set({ ambientIntensity: v }),
+  toggleRimLight:     ()  => set(s => ({ rimLight: !s.rimLight })),
+  setRimIntensity:    (v) => set({ rimIntensity: v }),
+  setRimColor:        (v) => set({ rimColor: v }),
   setExportQuality: (q) => set({ exportQuality: q }),
   setExportFmt:     (f) => set({ exportFmt: f }),
   setCameraTarget:  (v) => set({ cameraTarget: v }),

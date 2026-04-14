@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useCallback } from 'react'
 import useStore, { BG_PRESETS, computeBoxDims } from '../store'
 
 export default function RightPanel() {
@@ -177,20 +177,172 @@ function BgSection() {
 }
 
 // ── Lighting ────────────────────────────────────
+const ENV_PRESETS = [
+  { id:'studio',    emoji:'🎬', label:'Studiya'   },
+  { id:'warehouse', emoji:'🏭', label:'Ombor'     },
+  { id:'sunset',    emoji:'🌅', label:'Quyosh'    },
+  { id:'dawn',      emoji:'🌄', label:'Tong'      },
+  { id:'city',      emoji:'🌆', label:'Shahar'    },
+  { id:'forest',    emoji:'🌲', label:"O'rmon"    },
+  { id:'apartment', emoji:'🏠', label:'Xona'      },
+  { id:'lobby',     emoji:'🏛', label:'Zal'       },
+  { id:'night',     emoji:'🌙', label:'Tun'       },
+  { id:'park',      emoji:'🌳', label:'Park'      },
+]
+
 function LightSection() {
-  const brightness    = useStore(s => s.brightness)
-  const envIntensity  = useStore(s => s.envIntensity)
-  const shadowEnabled = useStore(s => s.shadowEnabled)
-  const setBrightness   = useStore(s => s.setBrightness)
-  const setEnvIntensity = useStore(s => s.setEnvIntensity)
-  const toggleShadow    = useStore(s => s.toggleShadow)
+  const brightness       = useStore(s => s.brightness)
+  const envIntensity     = useStore(s => s.envIntensity)
+  const envPreset        = useStore(s => s.envPreset)
+  const shadowEnabled    = useStore(s => s.shadowEnabled)
+  const shadowOpacity    = useStore(s => s.shadowOpacity)
+  const lightAzimuth     = useStore(s => s.lightAzimuth)
+  const lightElevation   = useStore(s => s.lightElevation)
+  const lightColor       = useStore(s => s.lightColor)
+  const lightIntensity   = useStore(s => s.lightIntensity)
+  const ambientColor     = useStore(s => s.ambientColor)
+  const ambientIntensity = useStore(s => s.ambientIntensity)
+  const rimLight         = useStore(s => s.rimLight)
+  const rimIntensity     = useStore(s => s.rimIntensity)
+  const rimColor         = useStore(s => s.rimColor)
+
+  const setBrightness        = useStore(s => s.setBrightness)
+  const setEnvIntensity      = useStore(s => s.setEnvIntensity)
+  const setEnvPreset         = useStore(s => s.setEnvPreset)
+  const toggleShadow         = useStore(s => s.toggleShadow)
+  const setShadowOpacity     = useStore(s => s.setShadowOpacity)
+  const setLightAzimuth      = useStore(s => s.setLightAzimuth)
+  const setLightElevation    = useStore(s => s.setLightElevation)
+  const setLightColor        = useStore(s => s.setLightColor)
+  const setLightIntensity    = useStore(s => s.setLightIntensity)
+  const setAmbientColor      = useStore(s => s.setAmbientColor)
+  const setAmbientIntensity  = useStore(s => s.setAmbientIntensity)
+  const toggleRimLight       = useStore(s => s.toggleRimLight)
+  const setRimIntensity      = useStore(s => s.setRimIntensity)
+  const setRimColor          = useStore(s => s.setRimColor)
+
+  const mainLightRef  = useRef()
+  const ambientRef    = useRef()
+  const rimColorRef   = useRef()
 
   return (
     <div className="panel-section">
-      <h3>Yoritish</h3>
-      <SliderRow label="Yorqinlik"      val={brightness.toFixed(2)}   min={.2} max={3}  step={.05} value={brightness}   onChange={v=>setBrightness(+v)} />
-      <SliderRow label="Muhit aksi"     val={envIntensity.toFixed(2)} min={0}  max={2}  step={.05} value={envIntensity} onChange={v=>setEnvIntensity(+v)} />
-      <ToggleRow label="Soya" on={shadowEnabled} onClick={toggleShadow} />
+      <h3>Yoritish va Muhit</h3>
+
+      {/* Environment preset */}
+      <div style={{fontSize:9,color:'#4a3010',marginBottom:5}}>Muhit (Environment):</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:3,marginBottom:10}}>
+        {ENV_PRESETS.map(p => (
+          <button key={p.id} title={p.label} onClick={()=>setEnvPreset(p.id)} style={{
+            padding:'5px 2px', borderRadius:5, fontSize:14, cursor:'pointer',
+            border:`1px solid ${envPreset===p.id?'#e8c050':'#2a1800'}`,
+            background: envPreset===p.id?'rgba(200,160,30,.3)':'rgba(200,150,20,.06)',
+            transition:'all .15s', lineHeight:1,
+          }}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(200,160,30,.2)'}
+          onMouseLeave={e=>e.currentTarget.style.background=envPreset===p.id?'rgba(200,160,30,.3)':'rgba(200,150,20,.06)'}
+          >{p.emoji}</button>
+        ))}
+      </div>
+      <div style={{fontSize:9,color:'#706030',marginBottom:8,textAlign:'center'}}>
+        {ENV_PRESETS.find(p=>p.id===envPreset)?.label || envPreset}
+      </div>
+
+      {/* Umumiy yorqinlik */}
+      <SliderRow label="Umumiy yorqinlik" val={brightness.toFixed(2)} min={.2} max={3} step={.05} value={brightness} onChange={v=>setBrightness(+v)} />
+      <SliderRow label="Muhit aksi"       val={envIntensity.toFixed(2)} min={0} max={2} step={.05} value={envIntensity} onChange={v=>setEnvIntensity(+v)} />
+
+      <Divider />
+
+      {/* Asosiy nur */}
+      <div style={{fontSize:9,color:'#c8a040',marginBottom:5,fontWeight:600}}>☀ Asosiy nur</div>
+      <SliderRow
+        label="Kuch"
+        val={lightIntensity.toFixed(1)}
+        min={0} max={6} step={0.1}
+        value={lightIntensity}
+        onChange={v=>setLightIntensity(+v)}
+      />
+      <div style={{marginBottom:7}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+          <label style={{fontSize:10,color:'#907030'}}>Gorizontal (azimut)</label>
+          <span style={{fontSize:10,color:'#e8c050',fontWeight:600}}>{lightAzimuth}°</span>
+        </div>
+        <input type="range" min={-180} max={180} step={1} value={lightAzimuth}
+          onChange={e=>setLightAzimuth(+e.target.value)} />
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#3a2200'}}>
+          <span>Chap</span><span>Old</span><span>O'ng</span>
+        </div>
+      </div>
+      <div style={{marginBottom:7}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+          <label style={{fontSize:10,color:'#907030'}}>Vertikal (balandlik)</label>
+          <span style={{fontSize:10,color:'#e8c050',fontWeight:600}}>{lightElevation}°</span>
+        </div>
+        <input type="range" min={5} max={90} step={1} value={lightElevation}
+          onChange={e=>setLightElevation(+e.target.value)} />
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#3a2200'}}>
+          <span>Yon</span><span>Baland</span>
+        </div>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        <span style={{fontSize:10,color:'#907030'}}>Nur rangi</span>
+        <ColorDot value={lightColor} ref_={mainLightRef} onChange={setLightColor} />
+      </div>
+
+      {/* Nur yo'nalishi preset tugmalari */}
+      <div style={{display:'flex',gap:3,marginBottom:8,flexWrap:'wrap'}}>
+        {[
+          {label:'Yuqori-old', az:30,  el:65},
+          {label:'Yuqori',     az:0,   el:85},
+          {label:'Chap',       az:-90, el:45},
+          {label:"O'ng",       az:90,  el:45},
+          {label:'Orqa',       az:180, el:50},
+          {label:'Pastki',     az:30,  el:15},
+        ].map(p=>(
+          <button key={p.label} onClick={()=>{setLightAzimuth(p.az);setLightElevation(p.el)}} style={{
+            padding:'3px 6px', borderRadius:4, fontSize:9, cursor:'pointer',
+            border:'1px solid #3a2200', background:'rgba(200,150,20,.07)', color:'#907030',
+            transition:'all .15s',
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(200,150,20,.22)';e.currentTarget.style.color='#e8c050'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(200,150,20,.07)';e.currentTarget.style.color='#907030'}}
+          >{p.label}</button>
+        ))}
+      </div>
+
+      <Divider />
+
+      {/* Ambient (muhit yoritishi) */}
+      <div style={{fontSize:9,color:'#a0c0e0',marginBottom:5,fontWeight:600}}>🌫 Ambient</div>
+      <SliderRow label="Kuch" val={ambientIntensity.toFixed(2)} min={0} max={2} step={.05} value={ambientIntensity} onChange={v=>setAmbientIntensity(+v)} />
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        <span style={{fontSize:10,color:'#907030'}}>Rang</span>
+        <ColorDot value={ambientColor} ref_={ambientRef} onChange={setAmbientColor} />
+      </div>
+
+      <Divider />
+
+      {/* Rim / Fill nur */}
+      <ToggleRow label="💫 Rim nur (kontur)" on={rimLight} onClick={toggleRimLight} />
+      {rimLight && (
+        <>
+          <SliderRow label="Kuch" val={rimIntensity.toFixed(2)} min={0} max={2} step={.05} value={rimIntensity} onChange={v=>setRimIntensity(+v)} />
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <span style={{fontSize:10,color:'#907030'}}>Rang</span>
+            <ColorDot value={rimColor} ref_={rimColorRef} onChange={setRimColor} />
+          </div>
+        </>
+      )}
+
+      <Divider />
+
+      {/* Soya */}
+      <div style={{fontSize:9,color:'#907030',marginBottom:5,fontWeight:600}}>🔲 Soya</div>
+      <ToggleRow label="Soya ko'rsat" on={shadowEnabled} onClick={toggleShadow} />
+      {shadowEnabled && (
+        <SliderRow label="Quyuqlik" val={shadowOpacity.toFixed(2)} min={0} max={.6} step={.01} value={shadowOpacity} onChange={v=>setShadowOpacity(+v)} />
+      )}
     </div>
   )
 }
@@ -299,6 +451,34 @@ function SliderRow({ label, val, min, max, step, value, onChange }) {
         <span style={{fontSize:10,color:'#e8c050',fontWeight:600}}>{val}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(e.target.value)}/>
+    </div>
+  )
+}
+
+function Divider() {
+  return <div style={{borderTop:'1px solid #1e1200',margin:'8px 0'}}/>
+}
+
+// Rang tanlash tugmasi — kichik doira
+function ColorDot({ value, ref_, onChange }) {
+  const inputRef = useRef()
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:6}}>
+      <div
+        onClick={()=>inputRef.current.click()}
+        style={{
+          width:20, height:20, borderRadius:'50%', background:value,
+          border:'2px solid #3a2200', cursor:'pointer', flexShrink:0,
+          boxShadow:'0 0 0 1px rgba(255,200,50,.2)',
+          transition:'transform .15s',
+        }}
+        onMouseEnter={e=>e.currentTarget.style.transform='scale(1.2)'}
+        onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
+      />
+      <span style={{fontSize:9,color:'#605030'}}>{value}</span>
+      <input ref={inputRef} type="color" value={value}
+        onChange={e=>onChange(e.target.value)}
+        style={{display:'none'}} />
     </div>
   )
 }

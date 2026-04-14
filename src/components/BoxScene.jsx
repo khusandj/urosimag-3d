@@ -67,6 +67,14 @@ function BoxMesh() {
 }
 
 // ─────────────────────────────────────────────────
+// Environment map — preset reaktiv
+// ─────────────────────────────────────────────────
+function EnvMap() {
+  const envPreset = useStore(s => s.envPreset)
+  return <Environment preset={envPreset} />
+}
+
+// ─────────────────────────────────────────────────
 // FOV sinxronizatsiya
 // ─────────────────────────────────────────────────
 function FovSync() {
@@ -220,18 +228,40 @@ function ScreenshotHandler({ controlsRef }) {
 // Background + Lights + Shadow plane (dinamik Y)
 // ─────────────────────────────────────────────────
 function SceneSync() {
-  const bgMode      = useStore(s => s.bgMode)
-  const customBgColor = useStore(s => s.customBgColor)
-  const brightness  = useStore(s => s.brightness)
-  const shadowOn    = useStore(s => s.shadowEnabled)
-  const srcImg      = useStore(s => s.srcImg)
-  const crops       = useStore(s => s.crops)
-  const boxScale    = useStore(s => s.boxScale)
+  const bgMode          = useStore(s => s.bgMode)
+  const customBgColor   = useStore(s => s.customBgColor)
+  const brightness      = useStore(s => s.brightness)
+  const shadowOn        = useStore(s => s.shadowEnabled)
+  const shadowOpacity   = useStore(s => s.shadowOpacity)
+  const srcImg          = useStore(s => s.srcImg)
+  const crops           = useStore(s => s.crops)
+  const boxScale        = useStore(s => s.boxScale)
+  const lightAzimuth    = useStore(s => s.lightAzimuth)
+  const lightElevation  = useStore(s => s.lightElevation)
+  const lightColor      = useStore(s => s.lightColor)
+  const lightIntensity  = useStore(s => s.lightIntensity)
+  const ambientColor    = useStore(s => s.ambientColor)
+  const ambientIntensity= useStore(s => s.ambientIntensity)
+  const rimLight        = useStore(s => s.rimLight)
+  const rimIntensity    = useStore(s => s.rimIntensity)
+  const rimColor        = useStore(s => s.rimColor)
   const { scene, gl } = useThree()
 
-  // Shadow plane Y — qutining pastki qirrasi hizasida
   const { h } = computeBoxDims(srcImg, crops, boxScale)
   const shadowY = -(h / 2 + 0.012)
+
+  // Asosiy nurning 3D pozitsiyasi — azimuth + elevation dan
+  const az  = lightAzimuth  * Math.PI / 180
+  const el  = lightElevation * Math.PI / 180
+  const R   = 6
+  const lx  = R * Math.cos(el) * Math.sin(az)
+  const ly  = R * Math.sin(el)
+  const lz  = R * Math.cos(el) * Math.cos(az)
+
+  // Rim nurning pozitsiyasi (asosiyga qarama-qarshi)
+  const rx  = -lx * 0.9
+  const ry  = ly  * 0.4
+  const rz  = -lz * 0.9
 
   useEffect(() => {
     if (bgMode === 'custom') {
@@ -254,18 +284,35 @@ function SceneSync() {
 
   return (
     <>
-      <ambientLight color="#fff5d0" intensity={brightness * 0.45} />
+      {/* Ambient (umumiy yoritish) */}
+      <ambientLight color={ambientColor} intensity={brightness * ambientIntensity} />
+
+      {/* Asosiy nur — yo'nalishi slider bilan boshqariladi */}
       <directionalLight
-        color="#fff8e0" intensity={brightness * 2.6}
-        position={[3, 5, 4]} castShadow={shadowOn}
-        shadow-mapSize={[2048, 2048]} shadow-bias={-0.001}
+        color={lightColor}
+        intensity={brightness * lightIntensity}
+        position={[lx, ly, lz]}
+        castShadow={shadowOn}
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.001}
       />
-      <directionalLight color="#c0d8ff" intensity={brightness * 0.65} position={[-3, 2, -2]} />
-      <directionalLight color="#ffd080" intensity={brightness * 0.30} position={[0, -3, -4]} />
-      {/* Shadow plane — qutining pastki qirrasi hizasida */}
+
+      {/* Rim/fill nur — old yorug'likning qarama-qarshi tomoni */}
+      {rimLight && (
+        <directionalLight
+          color={rimColor}
+          intensity={brightness * rimIntensity}
+          position={[rx, ry, rz]}
+        />
+      )}
+
+      {/* Past-orqa pastki fill */}
+      <directionalLight color="#ffd080" intensity={brightness * 0.22} position={[0, -3, -4]} />
+
+      {/* Shadow plane */}
       <mesh receiveShadow rotation={[-Math.PI/2, 0, 0]} position={[0, shadowY, 0]}>
         <planeGeometry args={[20, 20]} />
-        <shadowMaterial opacity={0.20} />
+        <shadowMaterial opacity={shadowOpacity} />
       </mesh>
     </>
   )
@@ -314,7 +361,7 @@ export default function BoxScene({ flashMsg }) {
         }}
       >
         <SceneSync />
-        <Environment preset="studio" />
+        <EnvMap />
         <BoxMesh />
         <OrbitControls
           ref={controlsRef}
