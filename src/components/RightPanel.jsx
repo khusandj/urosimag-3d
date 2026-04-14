@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import useStore, { BG_PRESETS, computeBoxDims } from '../store'
 
 export default function RightPanel() {
@@ -67,23 +67,44 @@ function DimsSection() {
   const boxScale    = useStore(s => s.boxScale)
   const setBoxScale = useStore(s => s.setBoxScale)
   const setPresetMM = useStore(s => s.setPresetMM)
+  const showFlash   = useStore(s => s.showFlash)
 
-  const dims = computeBoxDims(srcImg, crops, boxScale)
-  const hMM  = dims.hMM
+  const dims  = computeBoxDims(srcImg, crops, boxScale)
+  const hMM   = dims.hMM
+  const ratio = dims.dMM / dims.wMM   // D/W nisbati
+  const isTooFlat = ratio < 0.10       // juda yassiq
+
+  // Tezkor proporsiya o'rnatuvchi: crops.left.w ni korreksiya qilish
+  const setDepthRatio = useCallback((targetRatio) => {
+    const s = useStore.getState()
+    if (!s.srcImg) return
+    import('../store').then(({ cropToCanvas }) => {
+      const front = s.crops.front
+      // left.w = front.w * targetRatio (front kengligiga nisbatan)
+      const newLeftW = Math.min(0.45, front.w * targetRatio)
+      const newLeft  = { ...s.crops.left, w: newLeftW }
+      const newCrops = { ...s.crops, left: newLeft }
+      const newCanvas = cropToCanvas(s.srcImg, newLeft)
+      const textures  = newCanvas ? { ...s.textures, left: newCanvas } : s.textures
+      useStore.setState({ crops: newCrops, textures })
+      showFlash(`D nisbati tuzatildi (${Math.round(targetRatio*100)}%)`, 1500)
+    })
+  }, [showFlash])
 
   const presets = [
-    [180,100,70],[160,90,60],[200,110,80],[120,80,50],
+    [180,100,70,'Standart'],[160,90,60,'Kichik'],[200,110,80,'Katta'],[120,80,40,'Nozik'],
   ]
 
   return (
     <div className="panel-section">
       <h3>Karobka o'lchami</h3>
 
+      {/* W × H × D */}
       <div style={{
         display:'grid', gridTemplateColumns:'1fr 1fr 1fr',
-        gap:4, marginBottom:10,
+        gap:4, marginBottom:6,
         background:'rgba(0,0,0,.3)', borderRadius:6, padding:7,
-        border:'1px solid #2a1800',
+        border:`1px solid ${isTooFlat?'#a04020':'#2a1800'}`,
       }}>
         {[['W', dims.wMM, '#3dc85a'],['H', dims.hMM, '#e8c050'],['D', dims.dMM, '#dca020']].map(([ax,val,col]) => (
           <div key={ax} style={{textAlign:'center'}}>
@@ -93,6 +114,25 @@ function DimsSection() {
           </div>
         ))}
       </div>
+
+      {/* Ogohlantirish: juda yassiq */}
+      {isTooFlat && (
+        <div style={{
+          background:'rgba(180,60,0,.18)', border:'1px solid #a04020',
+          borderRadius:5, padding:'5px 8px', marginBottom:8, fontSize:9, color:'#e09060',
+        }}>
+          ⚠️ D juda kichik ({dims.dMM}mm). Dieline editorida <b>Chap</b> yuzini kengaytiring
+          yoki pastdagi tugmani bosing:
+          <div style={{display:'flex',gap:3,marginTop:5,flexWrap:'wrap'}}>
+            {[[0.30,'30%'],[0.40,'40%'],[0.50,'50%']].map(([r,l])=>(
+              <button key={r} onClick={()=>setDepthRatio(r)} style={{
+                padding:'3px 7px', borderRadius:4, fontSize:9, cursor:'pointer',
+                border:'1px solid #a06030', background:'rgba(200,100,20,.25)', color:'#e8a060',
+              }}>D={l} tuzat</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{fontSize:9, color:'#4a3010', marginBottom:8, lineHeight:1.5}}>
         ↑ Dieline chiziqlaridan avtomatik.<br/>
@@ -122,10 +162,11 @@ function DimsSection() {
 
       <div style={{fontSize:9,color:'#4a3010',marginBottom:5}}>Standart o'lchamlar:</div>
       <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
-        {presets.map(([w,h,d]) => (
+        {presets.map(([w,h,d,lbl]) => (
           <PresetBtn key={`${w}x${h}x${d}`} active={dims.hMM===h}
-            onClick={()=>setPresetMM(w,h,d)}>
-            {w}×{h}×{d}
+            onClick={()=>setPresetMM(w,h,d)}
+            title={`${w}×${h}×${d}mm`}>
+            {lbl}
           </PresetBtn>
         ))}
       </div>
@@ -431,9 +472,9 @@ function ViewBtn({ children, onClick }) {
   )
 }
 
-function PresetBtn({ children, onClick, active }) {
+function PresetBtn({ children, onClick, active, title }) {
   return (
-    <button onClick={onClick} style={{
+    <button onClick={onClick} title={title} style={{
       padding:'3px 7px', borderRadius:4, fontSize:9, cursor:'pointer',
       border:`1px solid ${active?'#c8a040':'#3a2200'}`,
       background: active?'rgba(200,160,30,.25)':'rgba(200,150,30,.06)',
