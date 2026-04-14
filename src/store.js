@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 
 export const FACE_META = [
-  { id: 'front',  label: 'Old (Front)', color: 'rgba(60,200,90,.35)',  stroke: '#3dc85a', threeIdx: 4 },
-  { id: 'back',   label: 'Orqa (Tarkib)',  color: 'rgba(60,110,220,.35)', stroke: '#4070e8', threeIdx: 5 },
-  { id: 'right',  label: "O'ng yon",       color: 'rgba(220,70,70,.35)',  stroke: '#e04646', threeIdx: 0 },
-  { id: 'left',   label: 'Chap yon',       color: 'rgba(220,160,30,.35)', stroke: '#dca020', threeIdx: 1 },
-  { id: 'top',    label: 'Yuqori',         color: 'rgba(160,70,220,.35)', stroke: '#a046dc', threeIdx: 2 },
-  { id: 'bottom', label: 'Pastki',         color: 'rgba(40,200,200,.35)', stroke: '#28c8c8', threeIdx: 3 },
+  { id: 'front',  label: 'Old',    color: 'rgba(60,200,90,.35)',  stroke: '#3dc85a', threeIdx: 4 },
+  { id: 'back',   label: 'Orqa',   color: 'rgba(60,110,220,.35)', stroke: '#4070e8', threeIdx: 5 },
+  { id: 'right',  label: "O'ng",   color: 'rgba(220,70,70,.35)',  stroke: '#e04646', threeIdx: 0 },
+  { id: 'left',   label: 'Chap',   color: 'rgba(220,160,30,.35)', stroke: '#dca020', threeIdx: 1 },
+  { id: 'top',    label: 'Yuqori', color: 'rgba(160,70,220,.35)', stroke: '#a046dc', threeIdx: 2 },
+  { id: 'bottom', label: 'Pastki', color: 'rgba(40,200,200,.35)', stroke: '#28c8c8', threeIdx: 3 },
 ]
 
 export const DEFAULT_CROPS = {
@@ -18,15 +18,16 @@ export const DEFAULT_CROPS = {
   bottom: { x: .01, y: .72, w: .55, h: .26  },
 }
 
+// BG_PRESETS — hech qachon mutate qilinmaydi
 export const BG_PRESETS = [
-  { id: 'dark',   label: 'Qora',    style: '#07050a',   threeColor: 0x07050a },
-  { id: 'light',  label: 'Och',     style: 'linear-gradient(135deg,#d8d0c0,#f0ece0)', threeColor: 0xe0d8c8 },
-  { id: 'white',  label: 'Oq',      style: '#ffffff',   threeColor: 0xffffff },
-  { id: 'transp', label: 'Shaffof', style: 'repeating-conic-gradient(#555 0% 25%,#333 0% 50%) 0 0/12px 12px', threeColor: null },
-  { id: 'gold',   label: 'Oltin',   style: 'linear-gradient(135deg,#3a2800,#1a1000)', threeColor: 0x1a1000 },
-  { id: 'blue',   label: "Ko'k",    style: 'linear-gradient(135deg,#0a0e1a,#101828)', threeColor: 0x0a0e1a },
-  { id: 'grad',   label: 'Gradient',style: 'radial-gradient(ellipse at center,#2a2030,#080608)', threeColor: 0x180d20 },
-  { id: 'custom', label: 'Rang',    style: '#c83050',   threeColor: null },
+  { id: 'dark',   label: 'Qora',     style: '#07050a',   threeColor: 0x07050a },
+  { id: 'light',  label: 'Och',      style: 'linear-gradient(135deg,#d8d0c0,#f0ece0)', threeColor: 0xe0d8c8 },
+  { id: 'white',  label: 'Oq',       style: '#ffffff',   threeColor: 0xffffff },
+  { id: 'transp', label: 'Shaffof',  style: 'repeating-conic-gradient(#555 0% 25%,#333 0% 50%) 0 0/12px 12px', threeColor: null },
+  { id: 'gold',   label: 'Oltin',    style: 'linear-gradient(135deg,#3a2800,#1a1000)', threeColor: 0x1a1000 },
+  { id: 'blue',   label: "Ko'k",     style: 'linear-gradient(135deg,#0a0e1a,#101828)', threeColor: 0x0a0e1a },
+  { id: 'grad',   label: 'Gradient', style: 'radial-gradient(ellipse at center,#2a2030,#080608)', threeColor: 0x180d20 },
+  { id: 'custom', label: 'Rang',     style: null,        threeColor: null },  // style → customBgColor dan
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,8 +48,6 @@ export function cropToCanvas(img, f) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Karobka o'lchamlari FAQAT crop nisbatlaridan hisoblanadi
-//   boxScale = 1.0 → balandlik 100 mm
-//   W, D → front + left crop piksel nisbatidan
 // ─────────────────────────────────────────────────────────────────────────────
 export function computeBoxDims(srcImg, crops, boxScale) {
   if (!srcImg) return { w: 1.8 * boxScale, h: 1.0 * boxScale, d: 0.7 * boxScale, wMM: 180, hMM: 100, dMM: 70 }
@@ -71,14 +70,18 @@ export function computeBoxDims(srcImg, crops, boxScale) {
 const useStore = create((set, get) => ({
   // ── Dieline ──
   srcImg:       null,
+  fileName:     null,
   crops:        { ...DEFAULT_CROPS },
   selectedFace: 'front',
 
   // ── Textures: HTMLCanvasElement (sinxron — async flash yo'q) ──
   textures: { front: null, back: null, left: null, right: null, top: null, bottom: null },
 
-  // ── Box o'lchami: faqat bitta scale (balandlik mm) ──
-  boxScale: 1.0,   // 1.0 = 100mm
+  // ── Undo tarixchasi ──
+  cropHistory: [],
+
+  // ── Box o'lchami ──
+  boxScale: 1.0,
 
   // ── Render ──
   bgMode:        'dark',
@@ -86,10 +89,15 @@ const useStore = create((set, get) => ({
   autoRotate:    true,
   shadowEnabled: true,
   brightness:    1.2,
-  envIntensity:  0.4,
+  envIntensity:  0.6,
+  fov:           42,
+
+  // ── Loading ──
+  isLoading: false,
 
   // ── Export ──
   exportQuality: 2048,
+  exportFmt:     'png',
 
   // ── Camera ──
   cameraTarget: null,
@@ -105,52 +113,68 @@ const useStore = create((set, get) => ({
   // ACTIONS
   // ════════════════════════════════════════════════════
 
-  setSrcImg: (img) => set({ srcImg: img }),
+  setSrcImg:    (img)  => set({ srcImg: img }),
+  setFileName:  (name) => set({ fileName: name }),
+  setLoading:   (v)    => set({ isLoading: v }),
   setSelectedFace: (face) => set({ selectedFace: face }),
 
-  // Cropni o'zgartir VA bir vaqtda texture+dims yangilansin (atomik)
-  setCropAndRefresh: (face, crop) => {
-    const s = get()
-    const newCrops = { ...s.crops, [face]: crop }
-    const textures = _extractAll(s.srcImg, newCrops)
-    set({ crops: newCrops, textures })
-    // dims BoxMesh ichida computed getBoxDims() orqali o'qiladi — qo'shimcha state kerak emas
+  // Crop o'zgartirishdan OLDIN joriy holatni tarixchaga qo'sh
+  pushCropHistory: () => {
+    const { crops } = get()
+    set(s => ({
+      cropHistory: [...s.cropHistory.slice(-29), JSON.parse(JSON.stringify(crops))]
+    }))
   },
 
-  // Barcha yuzlarni qayta kesib olish (Avtomatik aniqlashdan keyin)
+  // Undo — oxirgi holatga qaytish
+  undoCrop: () => {
+    const { cropHistory, srcImg } = get()
+    if (!cropHistory.length) return
+    const prev = cropHistory[cropHistory.length - 1]
+    const textures = _extractAll(srcImg, prev)
+    set(s => ({ crops: prev, textures, cropHistory: s.cropHistory.slice(0, -1) }))
+  },
+
+  // Cropni o'zgartir VA bir vaqtda texture yangilansin (atomik)
+  // Faqat o'zgargan face ning texture qayta yaratiladi — qolgan 5 tasi saqlanadi
+  setCropAndRefresh: (face, crop) => {
+    const s = get()
+    const newCrops   = { ...s.crops, [face]: crop }
+    const newCanvas  = s.srcImg ? cropToCanvas(s.srcImg, crop) : null
+    const textures   = newCanvas ? { ...s.textures, [face]: newCanvas } : s.textures
+    set({ crops: newCrops, textures })
+  },
+
+  // Barcha yuzlarni qayta kesib olish
   refreshAll: () => {
     const { srcImg, crops } = get()
     const textures = _extractAll(srcImg, crops)
     set({ textures })
   },
 
-  // Demo uchun canvas to'plamini to'g'ridan berish
   setAllTextures: (canvasMap) => set({ textures: canvasMap }),
 
-  // Balandlikni o'zgartirish (proporsional — W va D avtomatik)
   setBoxScale: (v) => set({ boxScale: Math.max(0.3, Math.min(4.0, v)) }),
 
-  // Preset: mm → scale
-  setPresetMM: (wMM, hMM, dMM) => {
-    const { srcImg, crops } = get()
-    // Agar rasm bo'lmasa, shunchaki scale qo'yilsin (H asosida)
+  setPresetMM: (wMM, hMM) => {
     set({ boxScale: hMM / 100 })
   },
+
+  setFov: (v) => set({ fov: Math.max(20, Math.min(90, v)) }),
 
   toggleAutoRotate: () => set(s => ({ autoRotate: !s.autoRotate })),
   toggleShadow:     () => set(s => ({ shadowEnabled: !s.shadowEnabled })),
   setBgMode:        (m) => set({ bgMode: m }),
 
+  // BG_PRESETS mutate qilinmaydi — rang store da saqlanadi
   setCustomBgColor: (hex) => {
-    const col = parseInt(hex.replace('#', ''), 16)
-    const cp  = BG_PRESETS.find(p => p.id === 'custom')
-    if (cp) { cp.style = hex; cp.threeColor = col }
     set({ customBgColor: hex, bgMode: 'custom' })
   },
 
   setBrightness:    (v) => set({ brightness: v }),
   setEnvIntensity:  (v) => set({ envIntensity: v }),
   setExportQuality: (q) => set({ exportQuality: q }),
+  setExportFmt:     (f) => set({ exportFmt: f }),
   setCameraTarget:  (v) => set({ cameraTarget: v }),
   toggleDieline:    ()  => set(s => ({ showDieline: !s.showDieline })),
   requestShot:      (o) => set({ shotRequest: { ...o, _id: Date.now() } }),
@@ -161,7 +185,6 @@ const useStore = create((set, get) => ({
     setTimeout(() => set(s => s.flashMsg === msg ? { flashMsg: null } : {}), dur)
   },
 
-  // Box dims (computed, Three.js units)
   getBoxDims: () => computeBoxDims(get().srcImg, get().crops, get().boxScale),
 }))
 

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react'
-import useStore, { FACE_META, computeBoxDims, cropToCanvas } from '../store'
+import useStore, { FACE_META, computeBoxDims, cropToCanvas, DEFAULT_CROPS } from '../store'
 import { autoDetectCrops } from '../utils/autoDetect'
 
 const HR = 7 // handle radius px
@@ -10,14 +10,15 @@ export default function DielineEditor() {
   const dragRef   = useRef(null)
   const fileRef   = useRef(null)
 
-  const srcImg         = useStore(s => s.srcImg)
-  const crops          = useStore(s => s.crops)
-  const selectedFace   = useStore(s => s.selectedFace)
-  const boxScale       = useStore(s => s.boxScale)
-  const setCropAndRefresh = useStore(s => s.setCropAndRefresh)
-  const setSelectedFace   = useStore(s => s.setSelectedFace)
-  const setSrcImg         = useStore(s => s.setSrcImg)
-  const showFlash         = useStore(s => s.showFlash)
+  const srcImg             = useStore(s => s.srcImg)
+  const crops              = useStore(s => s.crops)
+  const selectedFace       = useStore(s => s.selectedFace)
+  const boxScale           = useStore(s => s.boxScale)
+  const setCropAndRefresh  = useStore(s => s.setCropAndRefresh)
+  const setSelectedFace    = useStore(s => s.setSelectedFace)
+  const showFlash          = useStore(s => s.showFlash)
+  const pushCropHistory    = useStore(s => s.pushCropHistory)
+  const undoCrop           = useStore(s => s.undoCrop)
 
   // ── Draw ──────────────────────────────────────
   const draw = useCallback(() => {
@@ -26,7 +27,12 @@ export default function DielineEditor() {
     if (!canvas || !wrap) return
     const cw = wrap.clientWidth  || 380
     const ch = wrap.clientHeight || 400
-    canvas.width = cw; canvas.height = ch
+
+    // Canvas o'lchami faqat o'zgarganda reset — boshqa holda clearRect
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw; canvas.height = ch
+    }
+
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, cw, ch)
 
@@ -46,10 +52,8 @@ export default function DielineEditor() {
     const ox = (cw-dw)/2,              oy  = (ch-dh)/2
     canvas._m = { ox, oy, dw, dh }
 
-    // Draw dieline image
     ctx.drawImage(srcImg, ox, oy, dw, dh)
 
-    // Compute box dims for annotation
     const dims = computeBoxDims(srcImg, crops, boxScale)
 
     for (const fm of FACE_META) {
@@ -58,23 +62,19 @@ export default function DielineEditor() {
       const pw  = f.w*dw,      ph = f.h*dh
       const sel = fm.id === selectedFace
 
-      // Fill overlay
       ctx.fillStyle = fm.color
       ctx.fillRect(px, py, pw, ph)
 
-      // Border
       ctx.strokeStyle = fm.stroke
       ctx.lineWidth   = sel ? 2.5 : 1.5
       ctx.setLineDash(sel ? [] : [4,3])
       ctx.strokeRect(px, py, pw, ph)
       ctx.setLineDash([])
 
-      // Label
       ctx.fillStyle = fm.stroke
-      ctx.font = `${sel ? 'bold ' : ''}${sel ? 11 : 9}px Inter, Segoe UI`
-      ctx.fillText(fm.label, px+4, py+13)
+      ctx.font = `${sel ? 'bold ' : ''}${sel ? 11 : 10}px Inter, Segoe UI`
+      ctx.fillText(fm.label, px+4, py+14)
 
-      // Dimension annotation (har bir face uchun)
       const dimText = getDimText(fm.id, dims)
       if (dimText && pw > 50 && ph > 20) {
         ctx.font = `bold ${Math.min(11, Math.max(8, ph*.13))}px Inter`
@@ -86,24 +86,38 @@ export default function DielineEditor() {
         ctx.fillText(dimText,   tx - ctx.measureText(dimText).width/2, ty)
       }
 
-      // Resize handles (faqat tanlanganida)
       if (sel) drawHandles(ctx, px, py, pw, ph, fm.stroke)
     }
 
-    // Yon o'q ko'rsatkichlari (W, H, D)
     drawArrowAnnotations(ctx, ox, oy, dw, dh, crops, dims)
 
   }, [srcImg, crops, selectedFace, boxScale])
 
+  // Draw draw o'zgarganda
+  const drawRef = useRef(draw)
+  drawRef.current = draw
   useEffect(() => { draw() }, [draw])
 
+  // ResizeObserver — ref orqali, qayta yaratilmaydi
   useEffect(() => {
-    const ro = new ResizeObserver(draw)
+    const ro = new ResizeObserver(() => drawRef.current())
     if (wrapRef.current) ro.observe(wrapRef.current)
     return () => ro.disconnect()
-  }, [draw])
+  }, [])  // bo'sh deps — faqat mount/unmount
 
-  // ── Mouse: handle hits ─────────────────────────
+  // Keyboard: Ctrl+Z undo
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault()
+        undoCrop()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undoCrop])
+
+  // ── Pointer/Mouse meta ─────────────────────────
   function getMeta() { return canvasRef.current?._m || null }
 
   function facePx(fid) {
@@ -128,13 +142,18 @@ export default function DielineEditor() {
     return null
   }
 
-  // ── Drag ──────────────────────────────────────
-  const onMouseDown = useCallback((e) => {
+  // ── Pointer Events (mouse + touch + stylus) ───
+  const onPointerDown = useCallback((e) => {
     if (!srcImg) return
+    e.currentTarget.setPointerCapture(e.pointerId)
     const r  = canvasRef.current.getBoundingClientRect()
     const mx = e.clientX-r.left, my = e.clientY-r.top
     const p  = facePx(selectedFace); if (!p) return
     const hid = hitHandle(mx, my, p)
+
+    // Drag boshlanishida tarixxaga qo'sh (har move da emas)
+    pushCropHistory()
+
     if (hid) {
       dragRef.current = { type:'resize', face:selectedFace, hid, sx:mx, sy:my, orig:{...crops[selectedFace]}, meta:p }
       return
@@ -146,92 +165,92 @@ export default function DielineEditor() {
     }
   }, [srcImg, crops, selectedFace])
 
-  useEffect(() => {
-    const MIN = 0.015
-    const onMove = (e) => {
-      const d = dragRef.current; if (!d || !srcImg) return
-      const r   = canvasRef.current.getBoundingClientRect()
-      const mx  = e.clientX-r.left, my = e.clientY-r.top
-      const ddx = (mx-d.sx)/d.meta.dw
-      const ddy = (my-d.sy)/d.meta.dh
-      const o   = d.orig
-      let newCrop
-
-      if (d.type === 'move') {
-        newCrop = {
-          x: Math.max(0, Math.min(1-o.w, o.x+ddx)),
-          y: Math.max(0, Math.min(1-o.h, o.y+ddy)),
-          w: o.w, h: o.h,
-        }
-      } else {
-        let { x,y,w,h } = { ...o }
-        const hd = d.hid
-        if (hd.includes('w')) { const nw=w-ddx; if(nw>MIN){x=o.x+ddx;w=nw} }
-        if (hd.includes('e')) { w=Math.max(MIN,o.w+ddx) }
-        if (hd.includes('n')) { const nh=h-ddy; if(nh>MIN){y=o.y+ddy;h=nh} }
-        if (hd.includes('s')) { h=Math.max(MIN,o.h+ddy) }
-        newCrop = { x, y, w, h }
-      }
-      // ATOMIK: crop + texture + dims bir vaqtda yangilanadi
-      setCropAndRefresh(d.face, newCrop)
-    }
-    const onUp = () => { dragRef.current = null }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup',   onUp)
-    return () => { window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp) }
-  }, [srcImg, setCropAndRefresh])
-
-  const onMouseMove = useCallback((e) => {
-    if (dragRef.current || !srcImg) return
+  const onPointerMove = useCallback((e) => {
+    if (!srcImg) return
     const r  = canvasRef.current.getBoundingClientRect()
     const mx = e.clientX-r.left, my = e.clientY-r.top
-    const p  = facePx(selectedFace)
-    if (!p) return
-    const hid = hitHandle(mx,my,p)
-    const CURS = {nw:'nw-resize',n:'n-resize',ne:'ne-resize',e:'e-resize',
-                  se:'se-resize',s:'s-resize',sw:'sw-resize',w:'w-resize'}
-    canvasRef.current.style.cursor = hid ? (CURS[hid]||'crosshair') : (hitFace(mx,my)?'move':'crosshair')
-  }, [srcImg, crops, selectedFace])
+
+    // Cursor
+    if (!dragRef.current) {
+      const p   = facePx(selectedFace)
+      if (!p) return
+      const hid = hitHandle(mx,my,p)
+      const CURS = {nw:'nw-resize',n:'n-resize',ne:'ne-resize',e:'e-resize',
+                    se:'se-resize',s:'s-resize',sw:'sw-resize',w:'w-resize'}
+      canvasRef.current.style.cursor = hid ? (CURS[hid]||'crosshair') : (hitFace(mx,my)?'move':'crosshair')
+      return
+    }
+
+    // Drag
+    const MIN = 0.015
+    const d   = dragRef.current
+    const ddx = (mx-d.sx)/d.meta.dw
+    const ddy = (my-d.sy)/d.meta.dh
+    const o   = d.orig
+    let newCrop
+
+    if (d.type === 'move') {
+      newCrop = {
+        x: Math.max(0, Math.min(1-o.w, o.x+ddx)),
+        y: Math.max(0, Math.min(1-o.h, o.y+ddy)),
+        w: o.w, h: o.h,
+      }
+    } else {
+      let { x,y,w,h } = { ...o }
+      const hd = d.hid
+      if (hd.includes('w')) { const nw=w-ddx; if(nw>MIN){x=o.x+ddx;w=nw} }
+      if (hd.includes('e')) { w=Math.max(MIN,o.w+ddx) }
+      if (hd.includes('n')) { const nh=h-ddy; if(nh>MIN){y=o.y+ddy;h=nh} }
+      if (hd.includes('s')) { h=Math.max(MIN,o.h+ddy) }
+      newCrop = { x, y, w, h }
+    }
+    setCropAndRefresh(d.face, newCrop)
+  }, [srcImg, crops, selectedFace, setCropAndRefresh])
+
+  const onPointerUp = useCallback(() => {
+    dragRef.current = null
+  }, [])
 
   // ── File upload ──────────────────────────────
   const loadFile = (file) => {
     if (!file || !file.type.startsWith('image/')) return
+    useStore.setState({ isLoading: true, fileName: file.name })
     const img = new Image()
     img.onload = () => {
-      const detected = autoDetectCrops(img)
-      const finalCrops = detected ? { ...crops, ...detected } : crops
-      // Textures sinxron yaratamiz
-      const texs = {}
+      const detected   = autoDetectCrops(img)
+      const finalCrops = detected ? { ...DEFAULT_CROPS, ...detected } : { ...DEFAULT_CROPS }
+      const texs       = {}
       for (const [face, f] of Object.entries(finalCrops)) {
         const c = cropToCanvas(img, f); if (c) texs[face] = c
       }
-      useStore.setState({ srcImg: img, crops: finalCrops, textures: texs })
-      showFlash(detected ? 'Avtomatik aniqlandi!' : "Qo'lda sozlang", 2000)
+      useStore.setState({
+        srcImg: img, crops: finalCrops, textures: texs,
+        isLoading: false, cropHistory: [],
+      })
+      showFlash(detected ? '✅ Avtomatik aniqlandi!' : "ℹ️ Qo'lda sozlang", 2500)
+    }
+    img.onerror = () => {
+      useStore.setState({ isLoading: false })
+      showFlash('❌ Rasm yuklanmadi', 2000)
     }
     img.src = URL.createObjectURL(file)
   }
 
   const runAutoDetect = () => {
     if (!srcImg) { showFlash('Avval rasm yuklang!',2000); return }
-    const detected = autoDetectCrops(srcImg)
-    if (!detected) { showFlash("Aniqlab bo'lmadi",2000); return }
-    const finalCrops = { ...crops, ...detected }
-    const texs = {}
-    for (const [face, f] of Object.entries(finalCrops)) {
-      const c = cropToCanvas(srcImg, f); if (c) texs[face] = c
-    }
-    useStore.setState({ crops: finalCrops, textures: texs })
-    showFlash('Avtomatik aniqlandi!', 2000)
-  }
-
-  const applyAll = () => {
-    if (!srcImg) return
-    const texs = {}
-    for (const [face, f] of Object.entries(crops)) {
-      const c = cropToCanvas(srcImg, f); if (c) texs[face] = c
-    }
-    useStore.setState({ textures: texs })
-    showFlash("3D ga qo'llanildi!", 1800)
+    useStore.setState({ isLoading: true })
+    // setTimeout — UI yangilansin (spinner ko'rinsin)
+    setTimeout(() => {
+      const detected = autoDetectCrops(srcImg)
+      if (!detected) { useStore.setState({ isLoading: false }); showFlash("⚠️ Aniqlab bo'lmadi",2000); return }
+      const finalCrops = { ...useStore.getState().crops, ...detected }
+      const texs = {}
+      for (const [face, f] of Object.entries(finalCrops)) {
+        const c = cropToCanvas(srcImg, f); if (c) texs[face] = c
+      }
+      useStore.setState({ crops: finalCrops, textures: texs, isLoading: false })
+      showFlash('✅ Avtomatik aniqlandi!', 2000)
+    }, 30)
   }
 
   return (
@@ -241,12 +260,12 @@ export default function DielineEditor() {
       <div style={{ display:'flex', gap:5, padding:'7px 8px', borderBottom:'1px solid var(--border)', flexWrap:'wrap', alignItems:'center' }}>
         <TBtn primary onClick={()=>fileRef.current.click()}>📁 Yuklash</TBtn>
         <TBtn onClick={runAutoDetect}>🔍 Avtomatik</TBtn>
-        <TBtn primary onClick={applyAll} style={{marginLeft:'auto'}}>▶ Qo'llash</TBtn>
+        <TBtn onClick={undoCrop} style={{marginLeft:'auto'}} title="Ctrl+Z">↩ Undo</TBtn>
       </div>
 
       {/* Hint */}
       <div style={{ padding:'5px 10px', fontSize:10, color:'#5a3a10', borderBottom:'1px solid #1a1000', background:'#0c0800', flexShrink:0 }}>
-        💡 Chiziqlarni tort → karobka o'lchami avtomatik o'zgaradi, rasm buzilmaydi
+        💡 Chiziqlarni tort → karobka o'lchami o'zgaradi · Ctrl+Z undo
       </div>
 
       {/* Canvas */}
@@ -259,8 +278,10 @@ export default function DielineEditor() {
         <canvas
           ref={canvasRef}
           style={{ display:'block', width:'100%', height:'100%' }}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         />
       </div>
 
@@ -269,13 +290,13 @@ export default function DielineEditor() {
         {FACE_META.map(fm => (
           <div key={fm.id} onClick={()=>setSelectedFace(fm.id)} style={{
             display:'flex', alignItems:'center', gap:4,
-            padding:'3px 7px', borderRadius:4, cursor:'pointer',
+            padding:'3px 8px', borderRadius:4, cursor:'pointer',
             border:`1px solid ${fm.id===selectedFace?'#e8c050':fm.stroke+'44'}`,
             background: fm.id===selectedFace?'rgba(255,220,80,.1)':'transparent',
             transition:'all .15s',
           }}>
-            <div style={{ width:8, height:8, borderRadius:2, background:fm.stroke, flexShrink:0 }}/>
-            <span style={{ fontSize:10, color:fm.stroke }}>{fm.label}</span>
+            <div style={{ width:10, height:10, borderRadius:2, background:fm.stroke, flexShrink:0 }}/>
+            <span style={{ fontSize:11, color:fm.stroke }}>{fm.label}</span>
           </div>
         ))}
       </div>
@@ -286,9 +307,9 @@ export default function DielineEditor() {
 }
 
 // ── Toolbar button ─────────────────────────────
-function TBtn({ children, onClick, primary, style }) {
+function TBtn({ children, onClick, primary, style, title }) {
   return (
-    <button onClick={onClick} style={{
+    <button onClick={onClick} title={title} style={{
       padding:'5px 9px', borderRadius:5, fontSize:11, cursor:'pointer',
       whiteSpace:'nowrap', transition:'all .15s',
       border: primary?'1px solid #c08020':'1px solid #3a2200',
@@ -332,7 +353,6 @@ function getDimText(faceId, dims) {
   }
 }
 
-// Yon o'qlar — W, H, D vizual ko'rsatish
 function drawArrowAnnotations(ctx, ox, oy, dw, dh, crops, dims) {
   const { wMM, hMM, dMM } = dims
   const fc = crops.front
@@ -346,11 +366,8 @@ function drawArrowAnnotations(ctx, ox, oy, dw, dh, crops, dims) {
   const lx1 = ox + lc.x * dw
   const lx2 = ox + (lc.x + lc.w) * dw
 
-  // W ← → (old yuzning eni)
   drawBrace(ctx, fx1, fy2+6, fx2, fy2+6, `W: ${wMM}mm`, '#3dc85a')
-  // H ↑↓ (balandlik)
   drawBrace(ctx, fx2+6, fy1, fx2+6, fy2, `H: ${hMM}mm`, '#3dc85a', true)
-  // D (chuqurlik, chap yon kenglik)
   if (lc.w > 0.02) drawBrace(ctx, lx1, fy2+6, lx2, fy2+6, `D: ${dMM}mm`, '#dca020')
 }
 
@@ -359,7 +376,6 @@ function drawBrace(ctx, x1, y1, x2, y2, label, col, vertical=false) {
   ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5
 
   if (!vertical) {
-    // horizontal
     ctx.beginPath()
     ctx.moveTo(x1+2,y1); ctx.lineTo(x2-2,y2)
     ctx.moveTo(x1,y1-4); ctx.lineTo(x1,y1+4)
@@ -368,7 +384,6 @@ function drawBrace(ctx, x1, y1, x2, y2, label, col, vertical=false) {
     ctx.font = 'bold 9px Inter'; ctx.textAlign='center'
     ctx.fillText(label, (x1+x2)/2, y1-5)
   } else {
-    // vertical
     ctx.beginPath()
     ctx.moveTo(x1,y1+2); ctx.lineTo(x2,y2-2)
     ctx.moveTo(x1-4,y1); ctx.lineTo(x1+4,y1)
