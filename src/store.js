@@ -90,7 +90,7 @@ const useStore = create((set, get) => ({
   shadowEnabled: true,
   shadowOpacity: 0.18,
   brightness:    1.0,
-  envIntensity:  0.25,
+  envIntensity:  0.20,
   envPreset:     'studio',
   fov:           42,
 
@@ -98,11 +98,11 @@ const useStore = create((set, get) => ({
   lightAzimuth:   40,
   lightElevation: 55,
   lightColor:    '#fff8e8',
-  lightIntensity: 1.8,
+  lightIntensity: 0.65,
   ambientColor:  '#f0ead0',
-  ambientIntensity: 0.35,
+  ambientIntensity: 0.12,
   rimLight:       true,
-  rimIntensity:   0.40,
+  rimIntensity:   0.12,
   rimColor:      '#b0c8e8',
 
   // ── Loading ──

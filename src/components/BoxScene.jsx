@@ -34,12 +34,22 @@ function BoxMesh() {
         tex.minFilter       = THREE.LinearMipmapLinearFilter
         tex.magFilter       = THREE.LinearFilter
         tex.needsUpdate     = true
-        return new THREE.MeshStandardMaterial({
-          map: tex, roughness: 0.45, metalness: 0.02, envMapIntensity: envI,
+        return new THREE.MeshPhysicalMaterial({
+          map: tex,
+          roughness: 0.9,           // Asl bosma — mat qog'oz
+          metalness: 0,
+          clearcoat: 0.35,          // Laminat qatlami — yaltiroq
+          clearcoatRoughness: 0.15, // Silliq laminat
+          envMapIntensity: envI * 0.3,
         })
       }
-      return new THREE.MeshStandardMaterial({
-        color: DEFAULT_COLORS[face], roughness: 0.50, metalness: 0.02, envMapIntensity: envI,
+      return new THREE.MeshPhysicalMaterial({
+        color: DEFAULT_COLORS[face],
+        roughness: 0.7,
+        metalness: 0,
+        clearcoat: 0.2,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: envI * 0.4,
       })
     })
   }, [textures, envI])
@@ -70,7 +80,17 @@ function BoxMesh() {
 // Environment map — preset reaktiv
 // ─────────────────────────────────────────────────
 function EnvMap() {
-  const envPreset = useStore(s => s.envPreset)
+  const envPreset    = useStore(s => s.envPreset)
+  const envIntensity = useStore(s => s.envIntensity)
+  const { scene }    = useThree()
+
+  // scene.environmentIntensity — Environment map ning diffuz IBL kuchini nazorat qiladi
+  // Bu material.envMapIntensity dan ALOHIDA — bu UMUMIY sahna yoritishiga ta'sir qiladi
+  // Oq karobkalar uchun pastroq bo'lishi kerak (0.1-0.3)
+  useEffect(() => {
+    scene.environmentIntensity = envIntensity * 0.25
+  }, [envIntensity, scene])
+
   return <Environment preset={envPreset} />
 }
 
@@ -307,7 +327,7 @@ function SceneSync() {
       )}
 
       {/* Past-orqa pastki fill */}
-      <directionalLight color="#ffd080" intensity={brightness * 0.22} position={[0, -3, -4]} />
+      <directionalLight color="#ffd080" intensity={brightness * 0.08} position={[0, -3, -4]} />
 
       {/* Shadow plane */}
       <mesh receiveShadow rotation={[-Math.PI/2, 0, 0]} position={[0, shadowY, 0]}>
@@ -354,8 +374,8 @@ export default function BoxScene({ flashMsg }) {
         camera={{ position:[3.2, 2, 3.8], fov:42, near:0.1, far:100 }}
         gl={{ preserveDrawingBuffer:true, alpha:true, antialias:true }}
         onCreated={({ gl }) => {
-          gl.toneMapping         = THREE.ACESFilmicToneMapping
-          gl.toneMappingExposure = 0.95
+          gl.toneMapping         = THREE.NeutralToneMapping
+          gl.toneMappingExposure = 1.0
           gl.outputColorSpace    = THREE.SRGBColorSpace
           gl.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         }}
