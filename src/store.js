@@ -88,22 +88,22 @@ const useStore = create((set, get) => ({
   customBgColor: '#c83050',
   autoRotate:    true,
   shadowEnabled: true,
-  shadowOpacity: 0.20,
-  brightness:    1.2,
-  envIntensity:  0.6,
+  shadowOpacity: 0.18,
+  brightness:    1.0,
+  envIntensity:  0.25,
   envPreset:     'studio',
   fov:           42,
 
   // ── Yorug'lik nazorati ──
-  lightAzimuth:   45,    // gorizontal burchak -180..180
-  lightElevation: 58,    // vertikal burchak 0..90
-  lightColor:    '#fff8e0',
-  lightIntensity: 2.6,
-  ambientColor:  '#fff5d0',
-  ambientIntensity: 0.45,
+  lightAzimuth:   40,
+  lightElevation: 55,
+  lightColor:    '#fff8e8',
+  lightIntensity: 1.8,
+  ambientColor:  '#f0ead0',
+  ambientIntensity: 0.35,
   rimLight:       true,
-  rimIntensity:   0.65,
-  rimColor:      '#c0d8ff',
+  rimIntensity:   0.40,
+  rimColor:      '#b0c8e8',
 
   // ── Loading ──
   isLoading: false,

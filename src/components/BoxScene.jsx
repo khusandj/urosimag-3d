@@ -35,11 +35,11 @@ function BoxMesh() {
         tex.magFilter       = THREE.LinearFilter
         tex.needsUpdate     = true
         return new THREE.MeshStandardMaterial({
-          map: tex, roughness: 0.12, metalness: 0.06, envMapIntensity: envI,
+          map: tex, roughness: 0.45, metalness: 0.02, envMapIntensity: envI,
         })
       }
       return new THREE.MeshStandardMaterial({
-        color: DEFAULT_COLORS[face], roughness: 0.28, metalness: 0.06, envMapIntensity: envI,
+        color: DEFAULT_COLORS[face], roughness: 0.50, metalness: 0.02, envMapIntensity: envI,
       })
     })
   }, [textures, envI])
@@ -355,7 +355,7 @@ export default function BoxScene({ flashMsg }) {
         gl={{ preserveDrawingBuffer:true, alpha:true, antialias:true }}
         onCreated={({ gl }) => {
           gl.toneMapping         = THREE.ACESFilmicToneMapping
-          gl.toneMappingExposure = 1.35
+          gl.toneMappingExposure = 0.95
           gl.outputColorSpace    = THREE.SRGBColorSpace
           gl.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         }}
