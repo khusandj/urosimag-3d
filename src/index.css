@@ -259,6 +259,43 @@ input[type=range]::-webkit-slider-thumb:hover {
   box-shadow: 0 1px 4px rgba(0,0,0,.3);
 }
 
+/* ── View button (P4.6: CSS hover instead of JS) ── */
+.view-btn {
+  padding: 7px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s ease;
+}
+.view-btn:hover {
+  background: var(--accent-dim);
+  color: var(--text-accent);
+  border-color: rgba(108,138,255,.3);
+}
+
+/* ── Color dot ── */
+.color-dot {
+  transition: transform .15s, box-shadow .15s;
+}
+.color-dot:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px rgba(108,138,255,.2);
+}
+
+/* ── Chip hover ── */
+.chip:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.chip.active:hover {
+  background: var(--accent-hover);
+}
+
 /* ── Kbd hint ── */
 kbd {
   display: inline-block;

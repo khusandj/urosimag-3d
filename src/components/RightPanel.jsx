@@ -1,13 +1,11 @@
 import { useRef, useCallback } from 'react'
-import useStore, { BG_PRESETS, computeBoxDims } from '../store'
+import useStore, { BG_PRESETS, computeBoxDims, cropToCanvas } from '../store'
 import {
-  Video, RotateCw, Eye,
-  Ruler, ArrowUpDown,
+  Camera, RotateCw, Ruler, ArrowUpDown,
   Palette, Pipette,
   Sun, Lightbulb, Cloudy, Sparkles, Eclipse,
-  Download, Image, FileArchive, Square,
-  Camera,
-  ChevronDown,
+  Download, Square, FileArchive,
+  ChevronRight,
 } from 'lucide-react'
 
 export default function RightPanel() {
@@ -25,6 +23,35 @@ export default function RightPanel() {
   )
 }
 
+// ── Collapsible section wrapper ────────────────
+function Section({ id, icon, title, children, defaultOpen = true }) {
+  const collapsed = useStore(s => s.collapsedSections[id])
+  const toggle    = useStore(s => s.toggleSection)
+  const isOpen = collapsed === undefined ? defaultOpen : !collapsed
+
+  return (
+    <div className="panel-section">
+      <h3
+        onClick={() => toggle(id)}
+        style={{ cursor: 'pointer', userSelect: 'none', justifyContent: 'space-between' }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {icon} {title}
+        </span>
+        <ChevronRight
+          size={12}
+          style={{
+            transition: 'transform .2s',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            opacity: 0.4,
+          }}
+        />
+      </h3>
+      {isOpen && children}
+    </div>
+  )
+}
+
 // ── Camera ──────────────────────────────────────
 function CameraSection() {
   const setCameraTarget  = useStore(s => s.setCameraTarget)
@@ -38,22 +65,15 @@ function CameraSection() {
     ['right',"O'ng"],['top','Yuqori'],['iso','Burchak'],
   ]
   return (
-    <div className="panel-section">
-      <h3><Camera size={12} /> Rakurslar</h3>
+    <Section id="camera" icon={<Camera size={12}/>} title="Rakurslar">
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:10}}>
         {views.map(([id,label]) => (
-          <ViewBtn key={id} onClick={()=>setCameraTarget(id)}>{label}</ViewBtn>
+          <button key={id} className="view-btn" onClick={()=>setCameraTarget(id)}>{label}</button>
         ))}
       </div>
       <ToggleRow label="Avto-aylantirish" icon={<RotateCw size={12}/>} on={autoRotate} onClick={toggleAutoRotate} />
       <div style={{marginTop:8}}>
-        <SliderRow
-          label="FOV"
-          val={`${fov}°`}
-          min={20} max={90} step={1}
-          value={fov}
-          onChange={v=>setFov(+v)}
-        />
+        <SliderRow label="FOV" val={`${fov}°`} min={20} max={90} step={1} value={fov} onChange={v=>setFov(+v)} />
       </div>
       <div style={{fontSize:9,color:'var(--text-tertiary)',marginTop:6,lineHeight:1.7, display:'flex',flexWrap:'wrap',gap:4}}>
         <kbd>1-6</kbd> rakurslar
@@ -61,7 +81,7 @@ function CameraSection() {
         <kbd>Ctrl+S</kbd> saqlash
         <kbd>Ctrl+Z</kbd> undo
       </div>
-    </div>
+    </Section>
   )
 }
 
@@ -82,16 +102,14 @@ function DimsSection() {
   const setDepthRatio = useCallback((targetRatio) => {
     const s = useStore.getState()
     if (!s.srcImg) return
-    import('../store').then(({ cropToCanvas }) => {
-      const front = s.crops.front
-      const newLeftW = Math.min(0.45, front.w * targetRatio)
-      const newLeft  = { ...s.crops.left, w: newLeftW }
-      const newCrops = { ...s.crops, left: newLeft }
-      const newCanvas = cropToCanvas(s.srcImg, newLeft)
-      const textures  = newCanvas ? { ...s.textures, left: newCanvas } : s.textures
-      useStore.setState({ crops: newCrops, textures })
-      showFlash(`D nisbati tuzatildi (${Math.round(targetRatio*100)}%)`, 1500)
-    })
+    const front = s.crops.front
+    const newLeftW = Math.min(0.45, front.w * targetRatio)
+    const newLeft  = { ...s.crops.left, w: newLeftW }
+    const newCrops = { ...s.crops, left: newLeft }
+    const newCanvas = cropToCanvas(s.srcImg, newLeft)
+    const textures  = newCanvas ? { ...s.textures, left: newCanvas } : s.textures
+    useStore.setState({ crops: newCrops, textures })
+    showFlash(`D nisbati tuzatildi (${Math.round(targetRatio*100)}%)`, 1500)
   }, [showFlash])
 
   const presets = [
@@ -99,10 +117,7 @@ function DimsSection() {
   ]
 
   return (
-    <div className="panel-section">
-      <h3><Ruler size={12} /> O'lcham</h3>
-
-      {/* W × H × D */}
+    <Section id="dims" icon={<Ruler size={12}/>} title="O'lcham">
       <div style={{
         display:'grid', gridTemplateColumns:'1fr 1fr 1fr',
         gap:1, marginBottom:8, overflow:'hidden',
@@ -140,18 +155,13 @@ function DimsSection() {
             <ArrowUpDown size={11}/> Balandlik
           </label>
           <div style={{display:'flex',alignItems:'center',gap:4}}>
-            <input
-              className="num-input"
-              type="number" min={30} max={400} value={hMM}
-              onChange={e => setBoxScale(parseFloat(e.target.value)/100)}
-            />
+            <input className="num-input" type="number" min={30} max={400} value={hMM}
+              onChange={e => setBoxScale(parseFloat(e.target.value)/100)} />
             <span style={{fontSize:9,color:'var(--text-tertiary)'}}>mm</span>
           </div>
         </div>
-        <input
-          type="range" min={30} max={400} step={1} value={hMM}
-          onChange={e => setBoxScale(parseFloat(e.target.value)/100)}
-        />
+        <input type="range" min={30} max={400} step={1} value={hMM}
+          onChange={e => setBoxScale(parseFloat(e.target.value)/100)} />
       </div>
 
       <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
@@ -164,7 +174,7 @@ function DimsSection() {
           </button>
         ))}
       </div>
-    </div>
+    </Section>
   )
 }
 
@@ -177,8 +187,7 @@ function BgSection() {
   const colorRef      = useRef()
 
   return (
-    <div className="panel-section">
-      <h3><Palette size={12} /> Orqa fon</h3>
+    <Section id="bg" icon={<Palette size={12}/>} title="Orqa fon">
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,marginBottom:8}}>
         {BG_PRESETS.map(p => {
           const bgStyle = p.id === 'custom' ? customBgColor : p.style
@@ -193,8 +202,7 @@ function BgSection() {
                 outline: isActive ? '1px solid var(--accent)' : 'none',
                 outlineOffset: 1,
                 transition:'all .15s ease',
-                position:'relative',
-                overflow:'hidden',
+                position:'relative', overflow:'hidden',
               }}
             >
               {p.id === 'custom' && (
@@ -216,7 +224,7 @@ function BgSection() {
           : BG_PRESETS.find(p=>p.id===bgMode)?.label || 'Maxsus rang'
         }
       </div>
-    </div>
+    </Section>
   )
 }
 
@@ -235,6 +243,7 @@ const ENV_PRESETS = [
 ]
 
 function LightSection() {
+  // P4.10: Keraksiz ref lar olib tashlandi
   const brightness       = useStore(s => s.brightness)
   const envIntensity     = useStore(s => s.envIntensity)
   const envPreset        = useStore(s => s.envPreset)
@@ -265,15 +274,8 @@ function LightSection() {
   const setRimIntensity      = useStore(s => s.setRimIntensity)
   const setRimColor          = useStore(s => s.setRimColor)
 
-  const mainLightRef  = useRef()
-  const ambientRef    = useRef()
-  const rimColorRef   = useRef()
-
   return (
-    <div className="panel-section">
-      <h3><Sun size={12} /> Yoritish</h3>
-
-      {/* Environment preset */}
+    <Section id="light" icon={<Sun size={12}/>} title="Yoritish">
       <SubLabel>Muhit (Environment)</SubLabel>
       <div style={{display:'flex',flexWrap:'wrap',gap:3,marginBottom:8}}>
         {ENV_PRESETS.map(p => (
@@ -290,7 +292,6 @@ function LightSection() {
 
       <Divider />
 
-      {/* Main light */}
       <SubLabel icon={<Lightbulb size={11}/>}>Asosiy nur</SubLabel>
       <SliderRow label="Kuch" val={lightIntensity.toFixed(1)} min={0} max={6} step={0.1} value={lightIntensity} onChange={v=>setLightIntensity(+v)} />
       <SliderRow label="Azimut" val={`${lightAzimuth}°`} min={-180} max={180} step={1} value={lightAzimuth} onChange={v=>setLightAzimuth(+v)} />
@@ -298,7 +299,7 @@ function LightSection() {
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
         <span style={{fontSize:10,color:'var(--text-secondary)'}}>Rang</span>
-        <ColorDot value={lightColor} ref_={mainLightRef} onChange={setLightColor} />
+        <ColorDot value={lightColor} onChange={setLightColor} />
       </div>
 
       <div style={{display:'flex',gap:3,marginBottom:8,flexWrap:'wrap'}}>
@@ -318,36 +319,33 @@ function LightSection() {
 
       <Divider />
 
-      {/* Ambient */}
       <SubLabel icon={<Cloudy size={11}/>}>Ambient</SubLabel>
       <SliderRow label="Kuch" val={ambientIntensity.toFixed(2)} min={0} max={2} step={.05} value={ambientIntensity} onChange={v=>setAmbientIntensity(+v)} />
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
         <span style={{fontSize:10,color:'var(--text-secondary)'}}>Rang</span>
-        <ColorDot value={ambientColor} ref_={ambientRef} onChange={setAmbientColor} />
+        <ColorDot value={ambientColor} onChange={setAmbientColor} />
       </div>
 
       <Divider />
 
-      {/* Rim */}
       <ToggleRow label="Rim nur" icon={<Sparkles size={12}/>} on={rimLight} onClick={toggleRimLight} />
       {rimLight && (
         <>
           <SliderRow label="Kuch" val={rimIntensity.toFixed(2)} min={0} max={2} step={.05} value={rimIntensity} onChange={v=>setRimIntensity(+v)} />
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <span style={{fontSize:10,color:'var(--text-secondary)'}}>Rang</span>
-            <ColorDot value={rimColor} ref_={rimColorRef} onChange={setRimColor} />
+            <ColorDot value={rimColor} onChange={setRimColor} />
           </div>
         </>
       )}
 
       <Divider />
 
-      {/* Shadow */}
       <ToggleRow label="Soya" icon={<Eclipse size={12}/>} on={shadowEnabled} onClick={toggleShadow} />
       {shadowEnabled && (
         <SliderRow label="Quyuqlik" val={shadowOpacity.toFixed(2)} min={0} max={.6} step={.01} value={shadowOpacity} onChange={v=>setShadowOpacity(+v)} />
       )}
-    </div>
+    </Section>
   )
 }
 
@@ -371,9 +369,7 @@ function ExportSection() {
   ]
 
   return (
-    <div className="panel-section">
-      <h3><Download size={12} /> Eksport</h3>
-
+    <Section id="export" icon={<Download size={12}/>} title="Eksport">
       <SubLabel>Sifat</SubLabel>
       <div className="seg-group" style={{marginBottom:10}}>
         {Object.entries(QL).map(([k,v]) => (
@@ -401,25 +397,11 @@ function ExportSection() {
       <button className="btn-ghost" onClick={()=>requestShot({quality:exportQuality,transparent:isTransp,views:'all',fmt:exportFmt})}>
         <FileArchive size={14} /> 6 rakurs → ZIP
       </button>
-    </div>
+    </Section>
   )
 }
 
 // ── Shared components ──────────────────────────
-function ViewBtn({ children, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      padding:'7px 4px', border:'1px solid var(--border)', borderRadius:'var(--radius-sm)',
-      background:'transparent', color:'var(--text-secondary)', fontSize:10,
-      cursor:'pointer', textAlign:'center', transition:'all .15s ease',
-      fontWeight: 500,
-    }}
-    onMouseEnter={e=>{e.currentTarget.style.background='var(--accent-dim)';e.currentTarget.style.color='var(--text-accent)';e.currentTarget.style.borderColor='rgba(108,138,255,.3)'}}
-    onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='var(--text-secondary)';e.currentTarget.style.borderColor='var(--border)'}}
-    >{children}</button>
-  )
-}
-
 function SliderRow({ label, val, min, max, step, value, onChange }) {
   return (
     <div style={{marginBottom:8}}>
@@ -444,20 +426,17 @@ function Divider() {
   return <div style={{borderTop:'1px solid var(--border)',margin:'10px 0'}}/>
 }
 
-function ColorDot({ value, ref_, onChange }) {
+// P4.10 FIX: ref_ prop olib tashlandi — ichki ref yetarli
+function ColorDot({ value, onChange }) {
   const inputRef = useRef()
   return (
     <div style={{display:'flex',alignItems:'center',gap:6}}>
       <div
         onClick={()=>inputRef.current.click()}
-        style={{
-          width:22, height:22, borderRadius:6, background:value,
+        className="color-dot"
+        style={{ width:22, height:22, borderRadius:6, background:value,
           border:'2px solid var(--border-bright)', cursor:'pointer', flexShrink:0,
-          transition:'transform .15s, box-shadow .15s',
-          boxShadow:'0 0 0 0 transparent',
         }}
-        onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.1)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(108,138,255,.2)'}}
-        onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='0 0 0 0 transparent'}}
       />
       <span style={{fontSize:9,color:'var(--text-tertiary)',fontFamily:'monospace'}}>{value}</span>
       <input ref={inputRef} type="color" value={value}
@@ -473,7 +452,7 @@ function ToggleRow({ label, icon, on, onClick }) {
       <span style={{fontSize:10,color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:5}}>
         {icon}{label}
       </span>
-      <div className={`toggle ${on?'on':''}`} onClick={onClick}/>
+      <div className={`toggle ${on?'on':''}`} onClick={onClick} role="switch" aria-checked={on} />
     </div>
   )
 }

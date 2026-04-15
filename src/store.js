@@ -18,7 +18,6 @@ export const DEFAULT_CROPS = {
   bottom: { x: .01, y: .72, w: .55, h: .26  },
 }
 
-// BG_PRESETS — hech qachon mutate qilinmaydi
 export const BG_PRESETS = [
   { id: 'dark',   label: 'Qora',     style: '#07050a',   threeColor: 0x07050a },
   { id: 'light',  label: 'Och',      style: 'linear-gradient(135deg,#d8d0c0,#f0ece0)', threeColor: 0xe0d8c8 },
@@ -27,7 +26,7 @@ export const BG_PRESETS = [
   { id: 'gold',   label: 'Oltin',    style: 'linear-gradient(135deg,#3a2800,#1a1000)', threeColor: 0x1a1000 },
   { id: 'blue',   label: "Ko'k",     style: 'linear-gradient(135deg,#0a0e1a,#101828)', threeColor: 0x0a0e1a },
   { id: 'grad',   label: 'Gradient', style: 'radial-gradient(ellipse at center,#2a2030,#080608)', threeColor: 0x180d20 },
-  { id: 'custom', label: 'Rang',     style: null,        threeColor: null },  // style → customBgColor dan
+  { id: 'custom', label: 'Rang',     style: null,        threeColor: null },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,6 +120,10 @@ const useStore = create((set, get) => ({
   // ── UI ──
   showDieline: true,
   flashMsg:    null,
+  flashFading: false,
+
+  // ── Collapsible seksiyalar ──
+  collapsedSections: _loadCollapsed(),
 
   // ════════════════════════════════════════════════════
   // ACTIONS
@@ -149,7 +152,6 @@ const useStore = create((set, get) => ({
   },
 
   // Cropni o'zgartir VA bir vaqtda texture yangilansin (atomik)
-  // Faqat o'zgargan face ning texture qayta yaratiladi — qolgan 5 tasi saqlanadi
   setCropAndRefresh: (face, crop) => {
     const s = get()
     const newCrops   = { ...s.crops, [face]: crop }
@@ -169,8 +171,22 @@ const useStore = create((set, get) => ({
 
   setBoxScale: (v) => set({ boxScale: Math.max(0.3, Math.min(4.0, v)) }),
 
-  setPresetMM: (wMM, hMM) => {
-    set({ boxScale: hMM / 100 })
+  // P1.4 FIX: setPresetMM endi W, H, D ni to'g'ri moslashtiradi
+  setPresetMM: (wMM, hMM, dMM) => {
+    const s = get()
+    const newBoxScale = hMM / 100
+    if (s.srcImg && dMM != null) {
+      // D/W nisbatini crop orqali moslashtirish
+      const targetDW = dMM / wMM
+      const newLeftW = Math.min(0.45, s.crops.front.w * targetDW)
+      const newLeft  = { ...s.crops.left, w: newLeftW }
+      const newCrops = { ...s.crops, left: newLeft }
+      const newCanvas = cropToCanvas(s.srcImg, newLeft)
+      const textures  = newCanvas ? { ...s.textures, left: newCanvas } : s.textures
+      set({ boxScale: newBoxScale, crops: newCrops, textures })
+    } else {
+      set({ boxScale: newBoxScale })
+    }
   },
 
   setFov: (v) => set({ fov: Math.max(20, Math.min(90, v)) }),
@@ -179,7 +195,6 @@ const useStore = create((set, get) => ({
   toggleShadow:     () => set(s => ({ shadowEnabled: !s.shadowEnabled })),
   setBgMode:        (m) => set({ bgMode: m }),
 
-  // BG_PRESETS mutate qilinmaydi — rang store da saqlanadi
   setCustomBgColor: (hex) => {
     set({ customBgColor: hex, bgMode: 'custom' })
   },
@@ -204,16 +219,29 @@ const useStore = create((set, get) => ({
   requestShot:      (o) => set({ shotRequest: { ...o, _id: Date.now() } }),
   clearShotRequest: ()  => set({ shotRequest: null }),
 
+  // P2.2 FIX: Flash xabar fade-out bilan
   showFlash: (msg, dur = 2000) => {
-    set({ flashMsg: msg })
-    setTimeout(() => set(s => s.flashMsg === msg ? { flashMsg: null } : {}), dur)
+    set({ flashMsg: msg, flashFading: false })
+    setTimeout(() => {
+      set({ flashFading: true })
+      setTimeout(() => set(s => s.flashMsg === msg ? { flashMsg: null, flashFading: false } : {}), 250)
+    }, dur - 250)
+  },
+
+  // P2.3: Collapsible seksiyalar
+  toggleSection: (id) => {
+    set(s => {
+      const next = { ...s.collapsedSections, [id]: !s.collapsedSections[id] }
+      try { localStorage.setItem('boxview_collapsed', JSON.stringify(next)) } catch {}
+      return { collapsedSections: next }
+    })
   },
 
   getBoxDims: () => computeBoxDims(get().srcImg, get().crops, get().boxScale),
 }))
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Private: barcha yuzlarni sinxron canvas ga kesib olish
+// Private helpers
 // ─────────────────────────────────────────────────────────────────────────────
 function _extractAll(srcImg, crops) {
   if (!srcImg) return {}
@@ -223,6 +251,13 @@ function _extractAll(srcImg, crops) {
     if (c) out[face] = c
   }
   return out
+}
+
+function _loadCollapsed() {
+  try {
+    const raw = localStorage.getItem('boxview_collapsed')
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
 }
 
 export default useStore

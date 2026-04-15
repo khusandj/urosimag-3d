@@ -1,15 +1,18 @@
-import { useRef, useEffect, useCallback } from 'react'
-import useStore, { FACE_META, computeBoxDims, cropToCanvas, DEFAULT_CROPS } from '../store'
+import { useRef, useEffect, useCallback, useState } from 'react'
+import useStore, { FACE_META, computeBoxDims } from '../store'
+import { loadFile } from '../utils/loadFile'
 import { autoDetectCrops } from '../utils/autoDetect'
-import { Upload, Scan, Undo2, GripHorizontal } from 'lucide-react'
+import { cropToCanvas, DEFAULT_CROPS } from '../store'
+import { Upload, Scan, Undo2 } from 'lucide-react'
 
-const HR = 7 // handle radius px
+const HR = 7
 
 export default function DielineEditor() {
   const canvasRef = useRef(null)
   const wrapRef   = useRef(null)
   const dragRef   = useRef(null)
   const fileRef   = useRef(null)
+  const hasMoved  = useRef(false) // P1.5: faqat drag boshida push
 
   const srcImg             = useStore(s => s.srcImg)
   const crops              = useStore(s => s.crops)
@@ -20,6 +23,8 @@ export default function DielineEditor() {
   const showFlash          = useStore(s => s.showFlash)
   const pushCropHistory    = useStore(s => s.pushCropHistory)
   const undoCrop           = useStore(s => s.undoCrop)
+
+  const [isDragOver, setDragOver] = useState(false)
 
   // ── Draw ──────────────────────────────────────
   const draw = useCallback(() => {
@@ -38,8 +43,6 @@ export default function DielineEditor() {
 
     if (!srcImg) {
       ctx.fillStyle = '#0c0c10'; ctx.fillRect(0,0,cw,ch)
-
-      // Upload icon placeholder
       ctx.fillStyle = '#2a2a38'; ctx.font = '12px Inter, Segoe UI'
       ctx.textAlign = 'center'
       ctx.fillText('Shablon rasmini yuklang', cw/2, ch/2-6)
@@ -105,18 +108,9 @@ export default function DielineEditor() {
     return () => ro.disconnect()
   }, [])
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault()
-        undoCrop()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [undoCrop])
+  // P1.2 FIX: Ctrl+Z listener OLIB TASHLANDI — faqat App.jsx da bor
 
-  // ── Pointer/Mouse meta ─────────────────────────
+  // ── Pointer helpers ─────────────────────────
   function getMeta() { return canvasRef.current?._m || null }
 
   function facePx(fid) {
@@ -141,6 +135,7 @@ export default function DielineEditor() {
     return null
   }
 
+  // P1.5 FIX: pushCropHistory faqat haqiqiy drag boshida
   const onPointerDown = useCallback((e) => {
     if (!srcImg) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -149,7 +144,7 @@ export default function DielineEditor() {
     const p  = facePx(selectedFace); if (!p) return
     const hid = hitHandle(mx, my, p)
 
-    pushCropHistory()
+    hasMoved.current = false // Reset — drag hali boshlanmagan
 
     if (hid) {
       dragRef.current = { type:'resize', face:selectedFace, hid, sx:mx, sy:my, orig:{...crops[selectedFace]}, meta:p }
@@ -177,6 +172,12 @@ export default function DielineEditor() {
       return
     }
 
+    // P1.5: Birinchi harakat — faqat shu paytda tarixchaga qo'sh
+    if (!hasMoved.current) {
+      hasMoved.current = true
+      pushCropHistory()
+    }
+
     const MIN = 0.015
     const d   = dragRef.current
     const ddx = (mx-d.sx)/d.meta.dw
@@ -200,37 +201,14 @@ export default function DielineEditor() {
       newCrop = { x, y, w, h }
     }
     setCropAndRefresh(d.face, newCrop)
-  }, [srcImg, crops, selectedFace, setCropAndRefresh])
+  }, [srcImg, crops, selectedFace, setCropAndRefresh, pushCropHistory])
 
   const onPointerUp = useCallback(() => {
     dragRef.current = null
+    hasMoved.current = false
   }, [])
 
-  // ── File upload ──────────────────────────────
-  const loadFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) return
-    useStore.setState({ isLoading: true, fileName: file.name })
-    const img = new Image()
-    img.onload = () => {
-      const detected   = autoDetectCrops(img)
-      const finalCrops = detected ? { ...DEFAULT_CROPS, ...detected } : { ...DEFAULT_CROPS }
-      const texs       = {}
-      for (const [face, f] of Object.entries(finalCrops)) {
-        const c = cropToCanvas(img, f); if (c) texs[face] = c
-      }
-      useStore.setState({
-        srcImg: img, crops: finalCrops, textures: texs,
-        isLoading: false, cropHistory: [],
-      })
-      showFlash(detected ? 'Avtomatik aniqlandi!' : "Qo'lda sozlang", 2500)
-    }
-    img.onerror = () => {
-      useStore.setState({ isLoading: false })
-      showFlash('Rasm yuklanmadi', 2000)
-    }
-    img.src = URL.createObjectURL(file)
-  }
-
+  // ── Auto-detect ──────────────────────────────
   const runAutoDetect = () => {
     if (!srcImg) { showFlash('Avval rasm yuklang!',2000); return }
     useStore.setState({ isLoading: true })
@@ -262,12 +240,17 @@ export default function DielineEditor() {
         <ToolBtn onClick={undoCrop} icon={<Undo2 size={13}/>} title="Ctrl+Z">Qaytarish</ToolBtn>
       </div>
 
-      {/* Canvas */}
+      {/* Canvas — P2.5: drag-over signal */}
       <div
         ref={wrapRef}
-        style={{ flex:1, overflow:'hidden', background:'#08080c', position:'relative' }}
-        onDrop={e=>{e.preventDefault();loadFile(e.dataTransfer.files[0])}}
-        onDragOver={e=>e.preventDefault()}
+        style={{
+          flex:1, overflow:'hidden', background:'#08080c', position:'relative',
+          border: isDragOver ? '2px solid var(--accent)' : '2px solid transparent',
+          transition: 'border-color .2s',
+        }}
+        onDrop={e=>{e.preventDefault();setDragOver(false);loadFile(e.dataTransfer.files[0])}}
+        onDragOver={e=>{e.preventDefault();setDragOver(true)}}
+        onDragLeave={()=>setDragOver(false)}
       >
         <canvas
           ref={canvasRef}
@@ -277,6 +260,15 @@ export default function DielineEditor() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         />
+        {isDragOver && (
+          <div style={{
+            position:'absolute',inset:0,background:'rgba(108,138,255,.08)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            pointerEvents:'none',
+          }}>
+            <span style={{color:'var(--accent)',fontWeight:600,fontSize:14}}>Tashlang!</span>
+          </div>
+        )}
       </div>
 
       {/* Legend */}
@@ -361,7 +353,6 @@ function drawArrowAnnotations(ctx, ox, oy, dw, dh, crops, dims) {
   const fx2 = ox + (fc.x + fc.w) * dw
   const fy1 = oy + fc.y * dh
   const fy2 = oy + (fc.y + fc.h) * dh
-
   const lx1 = ox + lc.x * dw
   const lx2 = ox + (lc.x + lc.w) * dw
 
@@ -373,7 +364,6 @@ function drawArrowAnnotations(ctx, ox, oy, dw, dh, crops, dims) {
 function drawBrace(ctx, x1, y1, x2, y2, label, col, vertical=false) {
   ctx.save()
   ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5
-
   if (!vertical) {
     ctx.beginPath()
     ctx.moveTo(x1+2,y1); ctx.lineTo(x2-2,y2)
