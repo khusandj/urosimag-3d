@@ -1,10 +1,19 @@
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback } from 'react'
 import useStore, { BG_PRESETS, computeBoxDims } from '../store'
+import {
+  Video, RotateCw, Eye,
+  Ruler, ArrowUpDown,
+  Palette, Pipette,
+  Sun, Lightbulb, Cloudy, Sparkles, Eclipse,
+  Download, Image, FileArchive, Square,
+  Camera,
+  ChevronDown,
+} from 'lucide-react'
 
 export default function RightPanel() {
   return (
     <div style={{
-      width: 242, background:'var(--bg-panel2)', borderLeft:'1px solid var(--border)',
+      width: 248, background:'var(--bg-panel)', borderLeft:'1px solid var(--border)',
       display:'flex', flexDirection:'column', overflowY:'auto', flexShrink:0,
     }}>
       <CameraSection />
@@ -26,35 +35,31 @@ function CameraSection() {
 
   const views = [
     ['front','Old'],['back','Orqa'],['left','Chap'],
-    ['right',"O'ng"],['top','Yuqori'],['iso','Diagonal'],
+    ['right',"O'ng"],['top','Yuqori'],['iso','Burchak'],
   ]
   return (
     <div className="panel-section">
-      <h3>Rakurslar</h3>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:8}}>
+      <h3><Camera size={12} /> Rakurslar</h3>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:10}}>
         {views.map(([id,label]) => (
           <ViewBtn key={id} onClick={()=>setCameraTarget(id)}>{label}</ViewBtn>
         ))}
       </div>
-      <ToggleRow label="Avto-aylantir" on={autoRotate} onClick={toggleAutoRotate} />
-      <div style={{marginTop:6}}>
+      <ToggleRow label="Avto-aylantirish" icon={<RotateCw size={12}/>} on={autoRotate} onClick={toggleAutoRotate} />
+      <div style={{marginTop:8}}>
         <SliderRow
-          label="Perspektiva (FOV)"
+          label="FOV"
           val={`${fov}°`}
           min={20} max={90} step={1}
           value={fov}
           onChange={v=>setFov(+v)}
         />
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#3a2200',marginTop:1}}>
-          <span>Tor 20°</span><span>Keng 90°</span>
-        </div>
       </div>
-      <div style={{fontSize:9,color:'#3a1a00',marginTop:5,lineHeight:1.6}}>
-        💡 Klaviatura: <span style={{color:'#806030'}}>1-6</span> rakurslar ·{' '}
-        <span style={{color:'#806030'}}>Space</span> aylantirish ·{' '}
-        <span style={{color:'#806030'}}>Ctrl+S</span> saqlash ·{' '}
-        <span style={{color:'#806030'}}>H</span> panel ·{' '}
-        <span style={{color:'#806030'}}>Ctrl+Z</span> undo
+      <div style={{fontSize:9,color:'var(--text-tertiary)',marginTop:6,lineHeight:1.7, display:'flex',flexWrap:'wrap',gap:4}}>
+        <kbd>1-6</kbd> rakurslar
+        <kbd>Space</kbd> aylantirish
+        <kbd>Ctrl+S</kbd> saqlash
+        <kbd>Ctrl+Z</kbd> undo
       </div>
     </div>
   )
@@ -71,16 +76,14 @@ function DimsSection() {
 
   const dims  = computeBoxDims(srcImg, crops, boxScale)
   const hMM   = dims.hMM
-  const ratio = dims.dMM / dims.wMM   // D/W nisbati
-  const isTooFlat = ratio < 0.10       // juda yassiq
+  const ratio = dims.dMM / dims.wMM
+  const isTooFlat = ratio < 0.10
 
-  // Tezkor proporsiya o'rnatuvchi: crops.left.w ni korreksiya qilish
   const setDepthRatio = useCallback((targetRatio) => {
     const s = useStore.getState()
     if (!s.srcImg) return
     import('../store').then(({ cropToCanvas }) => {
       const front = s.crops.front
-      // left.w = front.w * targetRatio (front kengligiga nisbatan)
       const newLeftW = Math.min(0.45, front.w * targetRatio)
       const newLeft  = { ...s.crops.left, w: newLeftW }
       const newCrops = { ...s.crops, left: newLeft }
@@ -97,77 +100,68 @@ function DimsSection() {
 
   return (
     <div className="panel-section">
-      <h3>Karobka o'lchami</h3>
+      <h3><Ruler size={12} /> O'lcham</h3>
 
       {/* W × H × D */}
       <div style={{
         display:'grid', gridTemplateColumns:'1fr 1fr 1fr',
-        gap:4, marginBottom:6,
-        background:'rgba(0,0,0,.3)', borderRadius:6, padding:7,
-        border:`1px solid ${isTooFlat?'#a04020':'#2a1800'}`,
+        gap:1, marginBottom:8, overflow:'hidden',
+        background:'var(--border)', borderRadius:'var(--radius)',
+        border: isTooFlat ? '1px solid var(--danger)' : '1px solid var(--border)',
       }}>
-        {[['W', dims.wMM, '#3dc85a'],['H', dims.hMM, '#e8c050'],['D', dims.dMM, '#dca020']].map(([ax,val,col]) => (
-          <div key={ax} style={{textAlign:'center'}}>
-            <div style={{fontSize:9, color:'#605020', marginBottom:2}}>{ax}</div>
-            <div style={{fontSize:14, fontWeight:700, color:col}}>{val}</div>
-            <div style={{fontSize:9, color:'#504020'}}>mm</div>
+        {[['W', dims.wMM, 'var(--success)'],['H', dims.hMM, 'var(--accent)'],['D', dims.dMM, 'var(--warning)']].map(([ax,val,col]) => (
+          <div key={ax} style={{textAlign:'center', background:'var(--bg-elevated)', padding:'8px 4px'}}>
+            <div style={{fontSize:9, color:'var(--text-tertiary)', marginBottom:2}}>{ax}</div>
+            <div style={{fontSize:15, fontWeight:700, color:col, fontVariantNumeric:'tabular-nums'}}>{val}</div>
+            <div style={{fontSize:9, color:'var(--text-tertiary)'}}>mm</div>
           </div>
         ))}
       </div>
 
-      {/* Ogohlantirish: juda yassiq */}
       {isTooFlat && (
         <div style={{
-          background:'rgba(180,60,0,.18)', border:'1px solid #a04020',
-          borderRadius:5, padding:'5px 8px', marginBottom:8, fontSize:9, color:'#e09060',
+          background:'rgba(224,80,80,.08)', border:'1px solid rgba(224,80,80,.2)',
+          borderRadius:'var(--radius)', padding:'8px 10px', marginBottom:8, fontSize:10, color:'#e08080',
         }}>
-          ⚠️ D juda kichik ({dims.dMM}mm). Dieline editorida <b>Chap</b> yuzini kengaytiring
-          yoki pastdagi tugmani bosing:
-          <div style={{display:'flex',gap:3,marginTop:5,flexWrap:'wrap'}}>
+          D juda kichik ({dims.dMM}mm). Dieline da Chap yuzini kengaytiring:
+          <div style={{display:'flex',gap:4,marginTop:6}}>
             {[[0.30,'30%'],[0.40,'40%'],[0.50,'50%']].map(([r,l])=>(
-              <button key={r} onClick={()=>setDepthRatio(r)} style={{
-                padding:'3px 7px', borderRadius:4, fontSize:9, cursor:'pointer',
-                border:'1px solid #a06030', background:'rgba(200,100,20,.25)', color:'#e8a060',
-              }}>D={l} tuzat</button>
+              <button key={r} onClick={()=>setDepthRatio(r)} className="chip" style={{fontSize:10,borderColor:'rgba(224,80,80,.25)',color:'#e08080'}}>
+                D={l}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      <div style={{fontSize:9, color:'#4a3010', marginBottom:8, lineHeight:1.5}}>
-        ↑ Dieline chiziqlaridan avtomatik.<br/>
-        Balandlikni o'zgartiring → W, D proporsional.
-      </div>
-
       <div style={{marginBottom:10}}>
-        <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-          <label style={{fontSize:10,color:'#907030'}}>Balandlik (H)</label>
-          <div style={{display:'flex',alignItems:'center',gap:3}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+          <label style={{fontSize:10,color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:4}}>
+            <ArrowUpDown size={11}/> Balandlik
+          </label>
+          <div style={{display:'flex',alignItems:'center',gap:4}}>
             <input
               className="num-input"
               type="number" min={30} max={400} value={hMM}
               onChange={e => setBoxScale(parseFloat(e.target.value)/100)}
             />
-            <span style={{fontSize:9,color:'#605020'}}>mm</span>
+            <span style={{fontSize:9,color:'var(--text-tertiary)'}}>mm</span>
           </div>
         </div>
         <input
           type="range" min={30} max={400} step={1} value={hMM}
           onChange={e => setBoxScale(parseFloat(e.target.value)/100)}
         />
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#3a2200',marginTop:2}}>
-          <span>30mm</span><span>400mm</span>
-        </div>
       </div>
 
-      <div style={{fontSize:9,color:'#4a3010',marginBottom:5}}>Standart o'lchamlar:</div>
-      <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+      <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
         {presets.map(([w,h,d,lbl]) => (
-          <PresetBtn key={`${w}x${h}x${d}`} active={dims.hMM===h}
+          <button key={`${w}x${h}x${d}`}
+            className={`chip${dims.hMM===h?' active':''}`}
             onClick={()=>setPresetMM(w,h,d)}
             title={`${w}×${h}×${d}mm`}>
             {lbl}
-          </PresetBtn>
+          </button>
         ))}
       </div>
     </div>
@@ -184,32 +178,41 @@ function BgSection() {
 
   return (
     <div className="panel-section">
-      <h3>Orqa fon</h3>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:5,marginBottom:6}}>
+      <h3><Palette size={12} /> Orqa fon</h3>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,marginBottom:8}}>
         {BG_PRESETS.map(p => {
-          // custom preset ning style — store dan olinadi
           const bgStyle = p.id === 'custom' ? customBgColor : p.style
+          const isActive = bgMode === p.id
           return (
             <div key={p.id} title={p.label}
               onClick={()=>p.id==='custom'?colorRef.current.click():setBgMode(p.id)}
               style={{
-                aspectRatio:'1', borderRadius:6, cursor:'pointer',
+                aspectRatio:'1', borderRadius:'var(--radius)', cursor:'pointer',
                 background: bgStyle,
-                border:`2px solid ${bgMode===p.id?'#e8c050':'transparent'}`,
-                outline: bgMode===p.id?'1px solid #a08020':'none',
-                transition:'transform .15s',
+                border: `2px solid ${isActive?'var(--accent)':'transparent'}`,
+                outline: isActive ? '1px solid var(--accent)' : 'none',
+                outlineOffset: 1,
+                transition:'all .15s ease',
+                position:'relative',
+                overflow:'hidden',
               }}
-              onMouseEnter={e=>e.currentTarget.style.transform='scale(1.1)'}
-              onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
-            />
+            >
+              {p.id === 'custom' && (
+                <Pipette size={14} style={{
+                  position:'absolute', top:'50%', left:'50%',
+                  transform:'translate(-50%,-50%)',
+                  color:'#fff', opacity:0.6,
+                }}/>
+              )}
+            </div>
           )
         })}
       </div>
       <input ref={colorRef} type="color" value={customBgColor}
         onChange={e=>setCustomBgColor(e.target.value)} style={{display:'none'}}/>
-      <div style={{fontSize:10,color:'#605028',textAlign:'center'}}>
+      <div style={{fontSize:10,color:'var(--text-tertiary)',textAlign:'center'}}>
         {bgMode==='transp'
-          ? <span>Shaffof <span style={{color:'#60b0e0'}}>— PNG shaffof saqlash</span></span>
+          ? <span>Shaffof <span style={{color:'#60c8c8'}}>— PNG da shaffof</span></span>
           : BG_PRESETS.find(p=>p.id===bgMode)?.label || 'Maxsus rang'
         }
       </div>
@@ -219,16 +222,16 @@ function BgSection() {
 
 // ── Lighting ────────────────────────────────────
 const ENV_PRESETS = [
-  { id:'studio',    emoji:'🎬', label:'Studiya'   },
-  { id:'warehouse', emoji:'🏭', label:'Ombor'     },
-  { id:'sunset',    emoji:'🌅', label:'Quyosh'    },
-  { id:'dawn',      emoji:'🌄', label:'Tong'      },
-  { id:'city',      emoji:'🌆', label:'Shahar'    },
-  { id:'forest',    emoji:'🌲', label:"O'rmon"    },
-  { id:'apartment', emoji:'🏠', label:'Xona'      },
-  { id:'lobby',     emoji:'🏛', label:'Zal'       },
-  { id:'night',     emoji:'🌙', label:'Tun'       },
-  { id:'park',      emoji:'🌳', label:'Park'      },
+  { id:'studio',    label:'Studiya'   },
+  { id:'warehouse', label:'Ombor'     },
+  { id:'sunset',    label:'Quyosh'    },
+  { id:'dawn',      label:'Tong'      },
+  { id:'city',      label:'Shahar'    },
+  { id:'forest',    label:"O'rmon"    },
+  { id:'apartment', label:'Xona'      },
+  { id:'lobby',     label:'Zal'       },
+  { id:'night',     label:'Tun'       },
+  { id:'park',      label:'Park'      },
 ]
 
 function LightSection() {
@@ -268,70 +271,36 @@ function LightSection() {
 
   return (
     <div className="panel-section">
-      <h3>Yoritish va Muhit</h3>
+      <h3><Sun size={12} /> Yoritish</h3>
 
       {/* Environment preset */}
-      <div style={{fontSize:9,color:'#4a3010',marginBottom:5}}>Muhit (Environment):</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:3,marginBottom:10}}>
+      <SubLabel>Muhit (Environment)</SubLabel>
+      <div style={{display:'flex',flexWrap:'wrap',gap:3,marginBottom:8}}>
         {ENV_PRESETS.map(p => (
-          <button key={p.id} title={p.label} onClick={()=>setEnvPreset(p.id)} style={{
-            padding:'5px 2px', borderRadius:5, fontSize:14, cursor:'pointer',
-            border:`1px solid ${envPreset===p.id?'#e8c050':'#2a1800'}`,
-            background: envPreset===p.id?'rgba(200,160,30,.3)':'rgba(200,150,20,.06)',
-            transition:'all .15s', lineHeight:1,
-          }}
-          onMouseEnter={e=>e.currentTarget.style.background='rgba(200,160,30,.2)'}
-          onMouseLeave={e=>e.currentTarget.style.background=envPreset===p.id?'rgba(200,160,30,.3)':'rgba(200,150,20,.06)'}
-          >{p.emoji}</button>
+          <button key={p.id}
+            className={`chip${envPreset===p.id?' active':''}`}
+            onClick={()=>setEnvPreset(p.id)}
+            style={{fontSize:10, padding:'4px 8px'}}
+          >{p.label}</button>
         ))}
       </div>
-      <div style={{fontSize:9,color:'#706030',marginBottom:8,textAlign:'center'}}>
-        {ENV_PRESETS.find(p=>p.id===envPreset)?.label || envPreset}
-      </div>
 
-      {/* Umumiy yorqinlik */}
-      <SliderRow label="Umumiy yorqinlik" val={brightness.toFixed(2)} min={.2} max={3} step={.05} value={brightness} onChange={v=>setBrightness(+v)} />
-      <SliderRow label="Muhit aksi"       val={envIntensity.toFixed(2)} min={0} max={2} step={.05} value={envIntensity} onChange={v=>setEnvIntensity(+v)} />
+      <SliderRow label="Yorqinlik" val={brightness.toFixed(2)} min={.2} max={3} step={.05} value={brightness} onChange={v=>setBrightness(+v)} />
+      <SliderRow label="Muhit aksi" val={envIntensity.toFixed(2)} min={0} max={2} step={.05} value={envIntensity} onChange={v=>setEnvIntensity(+v)} />
 
       <Divider />
 
-      {/* Asosiy nur */}
-      <div style={{fontSize:9,color:'#c8a040',marginBottom:5,fontWeight:600}}>☀ Asosiy nur</div>
-      <SliderRow
-        label="Kuch"
-        val={lightIntensity.toFixed(1)}
-        min={0} max={6} step={0.1}
-        value={lightIntensity}
-        onChange={v=>setLightIntensity(+v)}
-      />
-      <div style={{marginBottom:7}}>
-        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-          <label style={{fontSize:10,color:'#907030'}}>Gorizontal (azimut)</label>
-          <span style={{fontSize:10,color:'#e8c050',fontWeight:600}}>{lightAzimuth}°</span>
-        </div>
-        <input type="range" min={-180} max={180} step={1} value={lightAzimuth}
-          onChange={e=>setLightAzimuth(+e.target.value)} />
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#3a2200'}}>
-          <span>Chap</span><span>Old</span><span>O'ng</span>
-        </div>
-      </div>
-      <div style={{marginBottom:7}}>
-        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-          <label style={{fontSize:10,color:'#907030'}}>Vertikal (balandlik)</label>
-          <span style={{fontSize:10,color:'#e8c050',fontWeight:600}}>{lightElevation}°</span>
-        </div>
-        <input type="range" min={5} max={90} step={1} value={lightElevation}
-          onChange={e=>setLightElevation(+e.target.value)} />
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#3a2200'}}>
-          <span>Yon</span><span>Baland</span>
-        </div>
-      </div>
+      {/* Main light */}
+      <SubLabel icon={<Lightbulb size={11}/>}>Asosiy nur</SubLabel>
+      <SliderRow label="Kuch" val={lightIntensity.toFixed(1)} min={0} max={6} step={0.1} value={lightIntensity} onChange={v=>setLightIntensity(+v)} />
+      <SliderRow label="Azimut" val={`${lightAzimuth}°`} min={-180} max={180} step={1} value={lightAzimuth} onChange={v=>setLightAzimuth(+v)} />
+      <SliderRow label="Balandlik" val={`${lightElevation}°`} min={5} max={90} step={1} value={lightElevation} onChange={v=>setLightElevation(+v)} />
+
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-        <span style={{fontSize:10,color:'#907030'}}>Nur rangi</span>
+        <span style={{fontSize:10,color:'var(--text-secondary)'}}>Rang</span>
         <ColorDot value={lightColor} ref_={mainLightRef} onChange={setLightColor} />
       </div>
 
-      {/* Nur yo'nalishi preset tugmalari */}
       <div style={{display:'flex',gap:3,marginBottom:8,flexWrap:'wrap'}}>
         {[
           {label:'Yuqori-old', az:30,  el:65},
@@ -339,38 +308,33 @@ function LightSection() {
           {label:'Chap',       az:-90, el:45},
           {label:"O'ng",       az:90,  el:45},
           {label:'Orqa',       az:180, el:50},
-          {label:'Pastki',     az:30,  el:15},
+          {label:'Past',       az:30,  el:15},
         ].map(p=>(
-          <button key={p.label} onClick={()=>{setLightAzimuth(p.az);setLightElevation(p.el)}} style={{
-            padding:'3px 6px', borderRadius:4, fontSize:9, cursor:'pointer',
-            border:'1px solid #3a2200', background:'rgba(200,150,20,.07)', color:'#907030',
-            transition:'all .15s',
-          }}
-          onMouseEnter={e=>{e.currentTarget.style.background='rgba(200,150,20,.22)';e.currentTarget.style.color='#e8c050'}}
-          onMouseLeave={e=>{e.currentTarget.style.background='rgba(200,150,20,.07)';e.currentTarget.style.color='#907030'}}
+          <button key={p.label} className="chip" style={{fontSize:9, padding:'3px 7px'}}
+            onClick={()=>{setLightAzimuth(p.az);setLightElevation(p.el)}}
           >{p.label}</button>
         ))}
       </div>
 
       <Divider />
 
-      {/* Ambient (muhit yoritishi) */}
-      <div style={{fontSize:9,color:'#a0c0e0',marginBottom:5,fontWeight:600}}>🌫 Ambient</div>
+      {/* Ambient */}
+      <SubLabel icon={<Cloudy size={11}/>}>Ambient</SubLabel>
       <SliderRow label="Kuch" val={ambientIntensity.toFixed(2)} min={0} max={2} step={.05} value={ambientIntensity} onChange={v=>setAmbientIntensity(+v)} />
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-        <span style={{fontSize:10,color:'#907030'}}>Rang</span>
+        <span style={{fontSize:10,color:'var(--text-secondary)'}}>Rang</span>
         <ColorDot value={ambientColor} ref_={ambientRef} onChange={setAmbientColor} />
       </div>
 
       <Divider />
 
-      {/* Rim / Fill nur */}
-      <ToggleRow label="💫 Rim nur (kontur)" on={rimLight} onClick={toggleRimLight} />
+      {/* Rim */}
+      <ToggleRow label="Rim nur" icon={<Sparkles size={12}/>} on={rimLight} onClick={toggleRimLight} />
       {rimLight && (
         <>
           <SliderRow label="Kuch" val={rimIntensity.toFixed(2)} min={0} max={2} step={.05} value={rimIntensity} onChange={v=>setRimIntensity(+v)} />
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-            <span style={{fontSize:10,color:'#907030'}}>Rang</span>
+            <span style={{fontSize:10,color:'var(--text-secondary)'}}>Rang</span>
             <ColorDot value={rimColor} ref_={rimColorRef} onChange={setRimColor} />
           </div>
         </>
@@ -378,9 +342,8 @@ function LightSection() {
 
       <Divider />
 
-      {/* Soya */}
-      <div style={{fontSize:9,color:'#907030',marginBottom:5,fontWeight:600}}>🔲 Soya</div>
-      <ToggleRow label="Soya ko'rsat" on={shadowEnabled} onClick={toggleShadow} />
+      {/* Shadow */}
+      <ToggleRow label="Soya" icon={<Eclipse size={12}/>} on={shadowEnabled} onClick={toggleShadow} />
       {shadowEnabled && (
         <SliderRow label="Quyuqlik" val={shadowOpacity.toFixed(2)} min={0} max={.6} step={.01} value={shadowOpacity} onChange={v=>setShadowOpacity(+v)} />
       )}
@@ -402,105 +365,85 @@ function ExportSection() {
   const isTransp = bgMode === 'transp'
 
   const FMTS = [
-    { id:'png',  label:'PNG',  desc:'Sifatli' },
-    { id:'jpg',  label:'JPEG', desc:'Kichik'  },
-    { id:'webp', label:'WebP', desc:'Eng kichik' },
+    { id:'png',  label:'PNG'  },
+    { id:'jpg',  label:'JPEG' },
+    { id:'webp', label:'WebP' },
   ]
 
   return (
     <div className="panel-section">
-      <h3>Eksport</h3>
+      <h3><Download size={12} /> Eksport</h3>
 
-      {/* Sifat */}
-      <div style={{fontSize:9,color:'#4a3010',marginBottom:4}}>Sifat (piksel):</div>
-      <div style={{display:'flex',gap:4,marginBottom:8}}>
+      <SubLabel>Sifat</SubLabel>
+      <div className="seg-group" style={{marginBottom:10}}>
         {Object.entries(QL).map(([k,v]) => (
-          <button key={k} onClick={()=>setExportQuality(v)} style={{
-            flex:1, padding:'5px 2px', borderRadius:4, fontSize:11, cursor:'pointer',
-            border:'1px solid #3a2200', fontWeight:600, transition:'all .15s',
-            background: exportQuality===v?'rgba(200,160,30,.3)':'rgba(255,190,30,.06)',
-            color: exportQuality===v?'#e8c050':'#907030',
-          }}>{k}</button>
+          <button key={k} className={`seg-btn${exportQuality===v?' active':''}`}
+            onClick={()=>setExportQuality(v)}>{k}</button>
         ))}
       </div>
 
-      {/* Format */}
-      <div style={{fontSize:9,color:'#4a3010',marginBottom:4}}>Format:</div>
-      <div style={{display:'flex',gap:4,marginBottom:10}}>
+      <SubLabel>Format</SubLabel>
+      <div className="seg-group" style={{marginBottom:12}}>
         {FMTS.map(f => (
-          <button key={f.id} onClick={()=>setExportFmt(f.id)} title={f.desc} style={{
-            flex:1, padding:'5px 2px', borderRadius:4, fontSize:10, cursor:'pointer',
-            border:'1px solid #3a2200', fontWeight:600, transition:'all .15s',
-            background: exportFmt===f.id?'rgba(200,160,30,.3)':'rgba(255,190,30,.06)',
-            color: exportFmt===f.id?'#e8c050':'#907030',
-          }}>{f.label}</button>
+          <button key={f.id} className={`seg-btn${exportFmt===f.id?' active':''}`}
+            onClick={()=>setExportFmt(f.id)}>{f.label}</button>
         ))}
       </div>
 
-      <button className="btn-gold" onClick={()=>requestShot({quality:exportQuality,transparent:false,fmt:exportFmt})}>
-        💾 Saqlash ({qLabel} · {exportFmt.toUpperCase()})
+      <button className="btn-primary" onClick={()=>requestShot({quality:exportQuality,transparent:false,fmt:exportFmt})}>
+        <Download size={14} /> Saqlash ({qLabel})
       </button>
       {isTransp && (
         <button className="btn-teal" onClick={()=>requestShot({quality:exportQuality,transparent:true,fmt:'png'})}>
-          🔲 Shaffof PNG {qLabel}
+          <Square size={14} /> Shaffof PNG
         </button>
       )}
-      <button className="btn-dark" onClick={()=>requestShot({quality:exportQuality,transparent:isTransp,views:'all',fmt:exportFmt})}>
-        📦 Barcha 6 rakurs → ZIP
+      <button className="btn-ghost" onClick={()=>requestShot({quality:exportQuality,transparent:isTransp,views:'all',fmt:exportFmt})}>
+        <FileArchive size={14} /> 6 rakurs → ZIP
       </button>
-
-      <div style={{fontSize:9,color:'#3a2000',marginTop:6,lineHeight:1.5}}>
-        {exportFmt==='webp' && '✨ WebP: PNG ga qaraganda ~30% kichik'}
-        {exportFmt==='jpg'  && '⚡ JPEG: fon yo\'q, tez yuklanadi'}
-        {exportFmt==='png'  && '🖼 PNG: eng yuqori sifat, shaffof qo\'llab-quvvatlanadi'}
-      </div>
     </div>
   )
 }
 
-// ── Shared ────────────────────────────────────────
+// ── Shared components ──────────────────────────
 function ViewBtn({ children, onClick }) {
   return (
     <button onClick={onClick} style={{
-      padding:'7px 3px', border:'1px solid #3a2200', borderRadius:5,
-      background:'rgba(255,190,30,.06)', color:'#907030', fontSize:10,
-      cursor:'pointer', textAlign:'center', transition:'all .15s',
+      padding:'7px 4px', border:'1px solid var(--border)', borderRadius:'var(--radius-sm)',
+      background:'transparent', color:'var(--text-secondary)', fontSize:10,
+      cursor:'pointer', textAlign:'center', transition:'all .15s ease',
+      fontWeight: 500,
     }}
-    onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,190,30,.2)';e.currentTarget.style.color='#e8c050'}}
-    onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,190,30,.06)';e.currentTarget.style.color='#907030'}}
+    onMouseEnter={e=>{e.currentTarget.style.background='var(--accent-dim)';e.currentTarget.style.color='var(--text-accent)';e.currentTarget.style.borderColor='rgba(108,138,255,.3)'}}
+    onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='var(--text-secondary)';e.currentTarget.style.borderColor='var(--border)'}}
     >{children}</button>
-  )
-}
-
-function PresetBtn({ children, onClick, active, title }) {
-  return (
-    <button onClick={onClick} title={title} style={{
-      padding:'3px 7px', borderRadius:4, fontSize:9, cursor:'pointer',
-      border:`1px solid ${active?'#c8a040':'#3a2200'}`,
-      background: active?'rgba(200,160,30,.25)':'rgba(200,150,30,.06)',
-      color: active?'#e8c050':'#907030',
-      transition:'all .15s',
-    }}>{children}</button>
   )
 }
 
 function SliderRow({ label, val, min, max, step, value, onChange }) {
   return (
-    <div style={{marginBottom:7}}>
+    <div style={{marginBottom:8}}>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-        <label style={{fontSize:10,color:'#907030'}}>{label}</label>
-        <span style={{fontSize:10,color:'#e8c050',fontWeight:600}}>{val}</span>
+        <label style={{fontSize:10,color:'var(--text-secondary)'}}>{label}</label>
+        <span style={{fontSize:10,color:'var(--text-accent)',fontWeight:600,fontVariantNumeric:'tabular-nums'}}>{val}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(e.target.value)}/>
     </div>
   )
 }
 
-function Divider() {
-  return <div style={{borderTop:'1px solid #1e1200',margin:'8px 0'}}/>
+function SubLabel({ children, icon }) {
+  return (
+    <div style={{fontSize:10,color:'var(--text-tertiary)',marginBottom:5,fontWeight:500, display:'flex',alignItems:'center',gap:4}}>
+      {icon}{children}
+    </div>
+  )
 }
 
-// Rang tanlash tugmasi — kichik doira
+function Divider() {
+  return <div style={{borderTop:'1px solid var(--border)',margin:'10px 0'}}/>
+}
+
 function ColorDot({ value, ref_, onChange }) {
   const inputRef = useRef()
   return (
@@ -508,15 +451,15 @@ function ColorDot({ value, ref_, onChange }) {
       <div
         onClick={()=>inputRef.current.click()}
         style={{
-          width:20, height:20, borderRadius:'50%', background:value,
-          border:'2px solid #3a2200', cursor:'pointer', flexShrink:0,
-          boxShadow:'0 0 0 1px rgba(255,200,50,.2)',
-          transition:'transform .15s',
+          width:22, height:22, borderRadius:6, background:value,
+          border:'2px solid var(--border-bright)', cursor:'pointer', flexShrink:0,
+          transition:'transform .15s, box-shadow .15s',
+          boxShadow:'0 0 0 0 transparent',
         }}
-        onMouseEnter={e=>e.currentTarget.style.transform='scale(1.2)'}
-        onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
+        onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.1)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(108,138,255,.2)'}}
+        onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='0 0 0 0 transparent'}}
       />
-      <span style={{fontSize:9,color:'#605030'}}>{value}</span>
+      <span style={{fontSize:9,color:'var(--text-tertiary)',fontFamily:'monospace'}}>{value}</span>
       <input ref={inputRef} type="color" value={value}
         onChange={e=>onChange(e.target.value)}
         style={{display:'none'}} />
@@ -524,10 +467,12 @@ function ColorDot({ value, ref_, onChange }) {
   )
 }
 
-function ToggleRow({ label, on, onClick }) {
+function ToggleRow({ label, icon, on, onClick }) {
   return (
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-      <span style={{fontSize:10,color:'#907030'}}>{label}</span>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+      <span style={{fontSize:10,color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:5}}>
+        {icon}{label}
+      </span>
       <div className={`toggle ${on?'on':''}`} onClick={onClick}/>
     </div>
   )

@@ -405,13 +405,13 @@ export default function BoxScene({ flashMsg }) {
           onDragOver={e=>e.preventDefault()}
         >
           <DropBox onClick={()=>fileRef.current.click()} />
-          <button className="btn-gold" style={{width:'auto',padding:'10px 28px',fontSize:13}}
+          <button className="btn-primary" style={{width:'auto',padding:'10px 28px',fontSize:13}}
             onClick={()=>fileRef.current.click()}>
             Rasm tanlash
           </button>
-          <span style={{fontSize:11,color:'#605020'}}>
+          <span style={{fontSize:11,color:'var(--text-tertiary)'}}>
             Yoki{' '}
-            <span style={{color:'#c8a040',cursor:'pointer'}} onClick={()=>{
+            <span style={{color:'var(--accent)',cursor:'pointer'}} onClick={()=>{
               const store = useStore.getState()
               runDemo(store); showFlash('Demo rejim',2000)
             }}>Demo ko'rish</span>
@@ -430,11 +430,11 @@ export default function BoxScene({ flashMsg }) {
         }}>
           <div style={{
             width:44,height:44,borderRadius:'50%',
-            border:'3px solid #3a2800',
-            borderTopColor:'#e8c050',
+            border:'3px solid #222230',
+            borderTopColor:'var(--accent)',
             animation:'spin 0.9s linear infinite',
           }}/>
-          <span style={{fontSize:12,color:'#a08030'}}>Tahlil qilinmoqda...</span>
+          <span style={{fontSize:12,color:'var(--text-secondary)'}}>Tahlil qilinmoqda...</span>
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
@@ -451,13 +451,18 @@ function DropBox({ onClick }) {
     <div onClick={onClick}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       style={{
-        border:`2px dashed ${hov?'#e8c050':'#9a7020'}`, borderRadius:14,
-        padding:'28px 48px', textAlign:'center', cursor:'pointer', transition:'all .25s',
-        background: hov?'rgba(50,34,0,.8)':'rgba(20,14,0,.7)',
+        border:`2px dashed ${hov?'var(--accent)':'#333348'}`, borderRadius:16,
+        padding:'32px 52px', textAlign:'center', cursor:'pointer', transition:'all .25s',
+        background: hov?'rgba(108,138,255,.06)':'rgba(20,20,30,.7)',
       }}>
-      <div style={{fontSize:36,marginBottom:8}}>📦</div>
-      <h2 style={{fontSize:16,color:'#d8b040',marginBottom:5}}>Dieline / Shablon yuklang</h2>
-      <p style={{color:'#907030',fontSize:12,lineHeight:1.5}}>
+      <div style={{fontSize:32,marginBottom:10,color:'var(--text-tertiary)',opacity:0.4}}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+          <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+        </svg>
+      </div>
+      <h2 style={{fontSize:15,color:'var(--text-primary)',marginBottom:5,fontWeight:600}}>Shablon yuklang</h2>
+      <p style={{color:'var(--text-tertiary)',fontSize:11,lineHeight:1.6}}>
         Karobkaning yoyilma shablonini<br/>bu yerga tashlang yoki tanlang
       </p>
     </div>

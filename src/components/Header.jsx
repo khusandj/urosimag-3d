@@ -1,3 +1,4 @@
+import { Box, Layers } from 'lucide-react'
 import useStore from '../store'
 
 export default function Header() {
@@ -9,42 +10,56 @@ export default function Header() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '7px 16px',
-      background: 'linear-gradient(90deg,#12100a,#1c1500,#12100a)',
-      borderBottom: '1px solid #4a3000',
+      padding: '8px 16px',
+      background: 'var(--bg-panel)',
+      borderBottom: '1px solid var(--border)',
       flexShrink: 0,
+      gap: 12,
     }}>
-      <div>
-        <h1 style={{ fontSize: 14, color: '#d4a030', letterSpacing: 2, fontWeight: 700 }}>
-          3D BOX VIEW
-        </h1>
-        <p style={{ fontSize: 10, color: '#806030', marginTop: 2 }}>
-          Dieline → Avtomatik 3D Karobka · 2K / 4K Export
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Box size={18} color="var(--accent)" strokeWidth={2} />
+        <div>
+          <h1 style={{ fontSize: 13, color: 'var(--text-primary)', letterSpacing: 1.5, fontWeight: 700 }}>
+            3D BOX VIEW
+          </h1>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6 }}>
-        <TabBtn active={showDieline}  onClick={toggleDieline}>Dieline Editor</TabBtn>
-        <TabBtn active={!showDieline} onClick={toggleDieline}>Faqat 3D</TabBtn>
+      <div style={{
+        display: 'flex',
+        background: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius)',
+        padding: 2,
+        border: '1px solid var(--border)',
+      }}>
+        <TabBtn active={showDieline} onClick={toggleDieline} icon={<Layers size={13} />}>
+          Dieline
+        </TabBtn>
+        <TabBtn active={!showDieline} onClick={toggleDieline} icon={<Box size={13} />}>
+          Faqat 3D
+        </TabBtn>
       </div>
     </header>
   )
 }
 
-function TabBtn({ children, active, onClick }) {
+function TabBtn({ children, active, onClick, icon }) {
   return (
     <button onClick={onClick} style={{
-      padding: '5px 13px',
-      borderRadius: 5,
-      border: '1px solid #5a3800',
-      background: active ? 'rgba(200,150,20,.3)' : 'rgba(200,150,20,.08)',
-      color: active ? '#e8c050' : '#b09040',
+      padding: '5px 14px',
+      borderRadius: 6,
+      border: 'none',
+      background: active ? 'var(--accent-solid)' : 'transparent',
+      color: active ? '#fff' : 'var(--text-tertiary)',
       fontSize: 11,
       cursor: 'pointer',
       fontWeight: active ? 600 : 400,
-      transition: 'all .15s',
+      transition: 'all .15s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
     }}>
-      {children}
+      {icon}{children}
     </button>
   )
 }

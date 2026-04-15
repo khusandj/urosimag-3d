@@ -1,3 +1,4 @@
+import { Mouse, Maximize2 } from 'lucide-react'
 import useStore, { computeBoxDims } from '../store'
 
 export default function StatusBar() {
@@ -8,14 +9,32 @@ export default function StatusBar() {
 
   return (
     <div style={{
-      background:'#060407', borderTop:'1px solid #221500',
-      padding:'4px 14px', fontSize:10, color:'#504020',
-      display:'flex', justifyContent:'space-between', flexShrink:0,
+      background: 'var(--bg-panel)',
+      borderTop: '1px solid var(--border)',
+      padding: '5px 16px',
+      fontSize: 10,
+      color: 'var(--text-tertiary)',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexShrink: 0,
+      gap: 12,
     }}>
-      <span>Chap klik: aylantirish · Scroll: zoom · O'ng klik: siljitish · Dieline: chiziqni tort → o'lcham yangilanadi</span>
-      <span style={{color:'#706030',fontWeight:600}}>
-        W:{dims.wMM} × H:{dims.hMM} × D:{dims.dMM} mm
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Mouse size={11} style={{ opacity: 0.4 }} />
+        <span>LMB: aylantirish · Scroll: zoom · RMB: siljitish</span>
+      </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        color: 'var(--text-secondary)',
+        fontWeight: 500,
+        fontVariantNumeric: 'tabular-nums',
+      }}>
+        <Maximize2 size={10} style={{ opacity: 0.5 }} />
+        {dims.wMM} × {dims.hMM} × {dims.dMM} mm
+      </div>
     </div>
   )
 }

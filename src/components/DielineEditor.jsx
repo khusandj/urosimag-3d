@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react'
 import useStore, { FACE_META, computeBoxDims, cropToCanvas, DEFAULT_CROPS } from '../store'
 import { autoDetectCrops } from '../utils/autoDetect'
+import { Upload, Scan, Undo2, GripHorizontal } from 'lucide-react'
 
 const HR = 7 // handle radius px
 
@@ -28,7 +29,6 @@ export default function DielineEditor() {
     const cw = wrap.clientWidth  || 380
     const ch = wrap.clientHeight || 400
 
-    // Canvas o'lchami faqat o'zgarganda reset — boshqa holda clearRect
     if (canvas.width !== cw || canvas.height !== ch) {
       canvas.width = cw; canvas.height = ch
     }
@@ -37,12 +37,14 @@ export default function DielineEditor() {
     ctx.clearRect(0, 0, cw, ch)
 
     if (!srcImg) {
-      ctx.fillStyle = '#0e0a02'; ctx.fillRect(0,0,cw,ch)
-      ctx.fillStyle = '#4a3010'; ctx.font = '13px Inter, Segoe UI'
+      ctx.fillStyle = '#0c0c10'; ctx.fillRect(0,0,cw,ch)
+
+      // Upload icon placeholder
+      ctx.fillStyle = '#2a2a38'; ctx.font = '12px Inter, Segoe UI'
       ctx.textAlign = 'center'
-      ctx.fillText('Shablon rasmini yuklang', cw/2, ch/2-10)
-      ctx.font = '11px Inter'; ctx.fillStyle = '#2a1a00'
-      ctx.fillText('yoki buradan sudrang', cw/2, ch/2+12)
+      ctx.fillText('Shablon rasmini yuklang', cw/2, ch/2-6)
+      ctx.font = '10px Inter'; ctx.fillStyle = '#1a1a28'
+      ctx.fillText('yoki bu yerga sudrang', cw/2, ch/2+14)
       ctx.textAlign = 'left'
       return
     }
@@ -93,19 +95,16 @@ export default function DielineEditor() {
 
   }, [srcImg, crops, selectedFace, boxScale])
 
-  // Draw draw o'zgarganda
   const drawRef = useRef(draw)
   drawRef.current = draw
   useEffect(() => { draw() }, [draw])
 
-  // ResizeObserver — ref orqali, qayta yaratilmaydi
   useEffect(() => {
     const ro = new ResizeObserver(() => drawRef.current())
     if (wrapRef.current) ro.observe(wrapRef.current)
     return () => ro.disconnect()
-  }, [])  // bo'sh deps — faqat mount/unmount
+  }, [])
 
-  // Keyboard: Ctrl+Z undo
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -142,7 +141,6 @@ export default function DielineEditor() {
     return null
   }
 
-  // ── Pointer Events (mouse + touch + stylus) ───
   const onPointerDown = useCallback((e) => {
     if (!srcImg) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -151,7 +149,6 @@ export default function DielineEditor() {
     const p  = facePx(selectedFace); if (!p) return
     const hid = hitHandle(mx, my, p)
 
-    // Drag boshlanishida tarixxaga qo'sh (har move da emas)
     pushCropHistory()
 
     if (hid) {
@@ -170,7 +167,6 @@ export default function DielineEditor() {
     const r  = canvasRef.current.getBoundingClientRect()
     const mx = e.clientX-r.left, my = e.clientY-r.top
 
-    // Cursor
     if (!dragRef.current) {
       const p   = facePx(selectedFace)
       if (!p) return
@@ -181,7 +177,6 @@ export default function DielineEditor() {
       return
     }
 
-    // Drag
     const MIN = 0.015
     const d   = dragRef.current
     const ddx = (mx-d.sx)/d.meta.dw
@@ -227,11 +222,11 @@ export default function DielineEditor() {
         srcImg: img, crops: finalCrops, textures: texs,
         isLoading: false, cropHistory: [],
       })
-      showFlash(detected ? '✅ Avtomatik aniqlandi!' : "ℹ️ Qo'lda sozlang", 2500)
+      showFlash(detected ? 'Avtomatik aniqlandi!' : "Qo'lda sozlang", 2500)
     }
     img.onerror = () => {
       useStore.setState({ isLoading: false })
-      showFlash('❌ Rasm yuklanmadi', 2000)
+      showFlash('Rasm yuklanmadi', 2000)
     }
     img.src = URL.createObjectURL(file)
   }
@@ -239,17 +234,16 @@ export default function DielineEditor() {
   const runAutoDetect = () => {
     if (!srcImg) { showFlash('Avval rasm yuklang!',2000); return }
     useStore.setState({ isLoading: true })
-    // setTimeout — UI yangilansin (spinner ko'rinsin)
     setTimeout(() => {
       const detected = autoDetectCrops(srcImg)
-      if (!detected) { useStore.setState({ isLoading: false }); showFlash("⚠️ Aniqlab bo'lmadi",2000); return }
+      if (!detected) { useStore.setState({ isLoading: false }); showFlash("Aniqlab bo'lmadi",2000); return }
       const finalCrops = { ...useStore.getState().crops, ...detected }
       const texs = {}
       for (const [face, f] of Object.entries(finalCrops)) {
         const c = cropToCanvas(srcImg, f); if (c) texs[face] = c
       }
       useStore.setState({ crops: finalCrops, textures: texs, isLoading: false })
-      showFlash('✅ Avtomatik aniqlandi!', 2000)
+      showFlash('Avtomatik aniqlandi!', 2000)
     }, 30)
   }
 
@@ -257,21 +251,21 @@ export default function DielineEditor() {
     <div style={{ width:395, background:'var(--bg-panel)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', flexShrink:0 }}>
 
       {/* Toolbar */}
-      <div style={{ display:'flex', gap:5, padding:'7px 8px', borderBottom:'1px solid var(--border)', flexWrap:'wrap', alignItems:'center' }}>
-        <TBtn primary onClick={()=>fileRef.current.click()}>📁 Yuklash</TBtn>
-        <TBtn onClick={runAutoDetect}>🔍 Avtomatik</TBtn>
-        <TBtn onClick={undoCrop} style={{marginLeft:'auto'}} title="Ctrl+Z">↩ Undo</TBtn>
-      </div>
-
-      {/* Hint */}
-      <div style={{ padding:'5px 10px', fontSize:10, color:'#5a3a10', borderBottom:'1px solid #1a1000', background:'#0c0800', flexShrink:0 }}>
-        💡 Chiziqlarni tort → karobka o'lchami o'zgaradi · Ctrl+Z undo
+      <div style={{
+        display:'flex', gap:6, padding:'8px 10px',
+        borderBottom:'1px solid var(--border)',
+        alignItems:'center',
+      }}>
+        <ToolBtn primary onClick={()=>fileRef.current.click()} icon={<Upload size={13}/>}>Yuklash</ToolBtn>
+        <ToolBtn onClick={runAutoDetect} icon={<Scan size={13}/>}>Aniqlash</ToolBtn>
+        <div style={{flex:1}}/>
+        <ToolBtn onClick={undoCrop} icon={<Undo2 size={13}/>} title="Ctrl+Z">Qaytarish</ToolBtn>
       </div>
 
       {/* Canvas */}
       <div
         ref={wrapRef}
-        style={{ flex:1, overflow:'hidden', background:'#060400', position:'relative' }}
+        style={{ flex:1, overflow:'hidden', background:'#08080c', position:'relative' }}
         onDrop={e=>{e.preventDefault();loadFile(e.dataTransfer.files[0])}}
         onDragOver={e=>e.preventDefault()}
       >
@@ -286,17 +280,21 @@ export default function DielineEditor() {
       </div>
 
       {/* Legend */}
-      <div style={{ display:'flex', gap:4, padding:'5px 8px', borderTop:'1px solid var(--border)', flexWrap:'wrap', flexShrink:0 }}>
+      <div style={{
+        display:'flex', gap:3, padding:'6px 10px',
+        borderTop:'1px solid var(--border)',
+        flexWrap:'wrap', flexShrink:0,
+      }}>
         {FACE_META.map(fm => (
           <div key={fm.id} onClick={()=>setSelectedFace(fm.id)} style={{
             display:'flex', alignItems:'center', gap:4,
-            padding:'3px 8px', borderRadius:4, cursor:'pointer',
-            border:`1px solid ${fm.id===selectedFace?'#e8c050':fm.stroke+'44'}`,
-            background: fm.id===selectedFace?'rgba(255,220,80,.1)':'transparent',
-            transition:'all .15s',
+            padding:'4px 8px', borderRadius:'var(--radius-sm)', cursor:'pointer',
+            border: `1px solid ${fm.id===selectedFace ? fm.stroke : 'transparent'}`,
+            background: fm.id===selectedFace ? fm.color : 'transparent',
+            transition:'all .15s ease',
           }}>
-            <div style={{ width:10, height:10, borderRadius:2, background:fm.stroke, flexShrink:0 }}/>
-            <span style={{ fontSize:11, color:fm.stroke }}>{fm.label}</span>
+            <div style={{ width:8, height:8, borderRadius:2, background:fm.stroke, flexShrink:0 }}/>
+            <span style={{ fontSize:10, color: fm.id===selectedFace ? '#fff' : 'var(--text-secondary)', fontWeight: fm.id===selectedFace ? 600 : 400 }}>{fm.label}</span>
           </div>
         ))}
       </div>
@@ -307,18 +305,19 @@ export default function DielineEditor() {
 }
 
 // ── Toolbar button ─────────────────────────────
-function TBtn({ children, onClick, primary, style, title }) {
+function ToolBtn({ children, onClick, primary, icon, style, title }) {
   return (
     <button onClick={onClick} title={title} style={{
-      padding:'5px 9px', borderRadius:5, fontSize:11, cursor:'pointer',
-      whiteSpace:'nowrap', transition:'all .15s',
-      border: primary?'1px solid #c08020':'1px solid #3a2200',
-      background: primary?'linear-gradient(135deg,#a07010,#d8a030)':'rgba(200,150,20,.08)',
-      color: primary?'#100800':'#a07030',
-      fontWeight: primary?700:400,
+      padding:'6px 12px', borderRadius:'var(--radius-sm)', fontSize:11, cursor:'pointer',
+      whiteSpace:'nowrap', transition:'all .15s ease',
+      display:'flex', alignItems:'center', gap:5,
+      border: primary ? 'none' : '1px solid var(--border)',
+      background: primary ? 'var(--accent-solid)' : 'transparent',
+      color: primary ? '#fff' : 'var(--text-secondary)',
+      fontWeight: primary ? 600 : 400,
       ...style,
     }}>
-      {children}
+      {icon}{children}
     </button>
   )
 }
@@ -326,7 +325,7 @@ function TBtn({ children, onClick, primary, style, title }) {
 // ── Canvas helpers ─────────────────────────────
 function drawHandles(ctx, px, py, pw, ph, col) {
   for (const h of getHPts(px,py,pw,ph)) {
-    ctx.fillStyle='#1a1000'; ctx.beginPath(); ctx.arc(h.px,h.py,HR/2+2,0,Math.PI*2); ctx.fill()
+    ctx.fillStyle='#0e0e14'; ctx.beginPath(); ctx.arc(h.px,h.py,HR/2+2,0,Math.PI*2); ctx.fill()
     ctx.fillStyle=col;       ctx.beginPath(); ctx.arc(h.px,h.py,HR/2,  0,Math.PI*2); ctx.fill()
   }
 }
